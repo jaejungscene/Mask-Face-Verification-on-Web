@@ -21,10 +21,11 @@ print(len(myDataset))
 
 def show_img(x_label, x_img, y_label, y_img):
     plt.style.use('dark_background')
-    fig = plt.figure()
-    plt.subplot(2, 1, 1)
+    fig = plt.figure(figsize=(8, 6))
+    fig.add_subplot(2, 2, 1)
     plt.title(x_label)
     plt.imshow(x_img.squeeze())
+    fig.add_subplot(2, 2, 2)
     plt.title(y_label)
     plt.imshow(y_img.squeeze())
     plt.show()

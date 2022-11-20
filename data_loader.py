@@ -34,9 +34,9 @@ class masked_face_dataset(Dataset):
         with ZipFile(self.dir_path + '.zip') as myZip:
             with myZip.open('with_mask/'+x_label) as x_file, myZip.open('without_mask/'+y_label) as y_file:
                 x_img = Image.open(x_file)
-                x_img = np.array(x_img, dtype=np.float)
+                x_img = np.array(x_img, dtype=np.float32)/255
                 y_img = Image.open(y_file)
-                y_img = np.array(y_img, dtype=np.float)
+                y_img = np.array(y_img, dtype=np.float32)/255
 
                 if self.transform is not None:
                     x_img = self.transform(x_img, self.phase)
