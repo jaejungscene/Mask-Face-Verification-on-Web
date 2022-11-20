@@ -4,28 +4,32 @@ import torch
 import torch.nn as nn
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
-from data_loader import eyes_dataset
+from data_loader import masked_face_dataset as FaceDataset, ImageTransform as Transform
 from model import Net
 import torch.optim as optim
 
-x_train = np.load('./dataset/x_train.npy').astype(np.float32)  # (2586, 26, 34, 1)
-y_train = np.load('./dataset/y_train.npy').astype(np.float32)  # (2586, 1)
-print(x_train.shape)
+PATH = './dataset/mask_dataset'
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-train_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize(64),
-    transforms.RandomRotation(10),
-    transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(0.5),
-    transforms.RandomHorizontalFlip(0.5),
-    transforms.Normalize(0, 1, inplace=False)
-])
+trans_config = {"mean": (0.5, 0.5, 0.5), "std": (0.2, 0.2, 0.2), "size": 1024}
 
-train_dataset = eyes_dataset(x_train, y_train, transform=train_transform)
+#myDataset = FaceDataset(dir_path=PATH, phase='train',
+#                        transform=Transform(trans_config["size"], trans_config["mean"], trans_config["mean"]))
+myDataset = FaceDataset(dir_path=PATH, phase='train')
+print(len(myDataset))
 
 
+def show_img(x_label, x_img, y_label, y_img):
+    plt.style.use('dark_background')
+    fig = plt.figure()
+    plt.subplot(2, 1, 1)
+    plt.title(x_label)
+    plt.imshow(x_img.squeeze())
+    plt.title(y_label)
+    plt.imshow(y_img.squeeze())
+    plt.show()
+
+show_img(myDataset[0][0], myDataset[0][1], myDataset[0][2], myDataset[0][3])
 # --------데이터 출력----------
 # plt.style.use('dark_background')
 # fig = plt.figure()
@@ -54,10 +58,8 @@ def accuracy(y_pred, y_test):
     return acc
 
 
-PATH = 'weights/classifier_weights_iter_50.pt'
-
-train_dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
-
+train_dataloader = DataLoader(myDataset, batch_size=32, shuffle=True, num_workers=0)
+"""
 model = Net()
 model.to(device)
 
@@ -98,3 +100,4 @@ for epoch in range(epochs):
 
 print("learning finish")
 torch.save(model.state_dict(), PATH)
+"""
