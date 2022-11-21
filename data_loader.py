@@ -41,6 +41,7 @@ class masked_face_dataset(Dataset):
                 if self.transform is not None:
                     x_img = self.transform(x_img, self.phase)
                     y_img = self.transform(y_img, self.phase)
+                    print('transformed!')
 
         return x_label, x_img, y_label, y_img
 
