@@ -4,6 +4,10 @@ import numpy as np
 import torch
 from data_loader import masked_face_dataset, ImageTransform
 import mediapipe as mp
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.models import load_model
+import argparse
 
 
 DESIRED_HEIGHT = 480
@@ -18,6 +22,12 @@ LIP = [0, 37, 39, 61, 84, 17, 314, 291, 267]
 mp_face_mesh = mp.solutions.face_mesh
 mp_drawing = mp.solutions.drawing_utils
 mp_drawing_styles = mp.solutions.drawing_styles
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-m", "--model", type=str, default="mask_detector.model",
+                help="path to trained face mask detector model")
+args = vars(ap.parse_args())
+
 
 def landmarksDetection(img, face_landmarks, draw=False):
     img_height, img_width = img.shape[:2]
@@ -44,7 +54,6 @@ def resize_and_show(image):
 
 
 def crop(img, crop_points):
-    print(crop_points)
     x1, y1 = np.amin(crop_points, axis=0)
     x2, y2 = np.amax(crop_points, axis=0)
     cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
@@ -91,6 +100,19 @@ for name, image in X.items():
     resize_and_show(image)
 """
 
+def predict_mask(frame, model):
+    frame = cv2.resize(frame, dsize=(224, 224))
+    print(frame.shape, "frame shape")
+    faces = frame.reshape((1, 224, 224, 3))
+
+    pred = model.predict(faces, batch_size=1)
+
+    return pred
+
+
+# 모델 불러오기
+maskNet = load_model(args["model"])
+
 # 웹캠으로 테스트
 video = cv2.VideoCapture(0)
 
@@ -103,7 +125,6 @@ with mp_face_mesh.FaceMesh(
     while (True):
         # frame마다 캡쳐하기
         ret, frame = video.read()
-        print(frame.shape)
         img_height, img_width, _ = frame.shape
 
         results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -164,6 +185,10 @@ with mp_face_mesh.FaceMesh(
         cv2.imshow('frame', annotated_image)
         cv2.imshow('frame2', frame)
         cv2.imshow('frame3', whole_face)
+        print('face', whole_face.shape)
+
+        result = predict_mask(frame, maskNet)
+        print("result===========>", result)
 
         # 'q'버튼 누르면 종료하기
         if cv2.waitKey(1) & 0xFF == ord('q'): break
