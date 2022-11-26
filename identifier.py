@@ -100,12 +100,14 @@ for name, image in X.items():
     resize_and_show(image)
 """
 
-def predict_mask(frame, model):
-    frame = cv2.resize(frame, dsize=(224, 224))
-    print(frame.shape, "frame shape")
-    faces = frame.reshape((1, 224, 224, 3))
-
-    pred = model.predict(faces, batch_size=1)
+def predict_mask(face, model):
+    # Image Preprocessing
+    face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+    face = cv2.resize(face, dsize=(224, 224))
+    face = img_to_array(face)
+    face = face.reshape((1, 224, 224, 3))
+    face = preprocess_input(face)
+    pred = model.predict(face, batch_size=1)
 
     return pred
 
@@ -133,6 +135,8 @@ with mp_face_mesh.FaceMesh(
         if not results.multi_face_landmarks:
             continue
         annotated_image = frame.copy()
+        cropped_image = frame.copy()
+
         for face_landmarks in results.multi_face_landmarks:
             mp_drawing.draw_landmarks(
                 image=annotated_image,
@@ -158,37 +162,47 @@ with mp_face_mesh.FaceMesh(
 
 
         # Face_Landmark Crop
-        mesh_coords = landmarksDetection(frame, face_landmarks, False)
+        mesh_coords = landmarksDetection(cropped_image, face_landmarks, False)
         left_eye_points = np.array([mesh_coords[p] for p in LEFT_EYE], dtype=np.int32)
         right_eye_points = np.array([mesh_coords[p] for p in RIGHT_EYE], dtype=np.int32)
         nose_points = np.array([mesh_coords[p] for p in NOSE], dtype=np.int32)
         lip_points = np.array([mesh_coords[p] for p in LIP], dtype=np.int32)
 
-        left_eye, left_eye_rect = crop(frame, left_eye_points)
-        right_eye, right_eye_rect = crop(frame, right_eye_points)
-        nose, nose_rect = crop(frame, nose_points)
-        lip, lip_rect = crop(frame, lip_points)
+        left_eye, left_eye_rect = crop(cropped_image, left_eye_points)
+        right_eye, right_eye_rect = crop(cropped_image, right_eye_points)
+        nose, nose_rect = crop(cropped_image, nose_points)
+        lip, lip_rect = crop(cropped_image, lip_points)
         whole_face, whole_face_rect = crop(frame, mesh_coords)
-        cv2.rectangle(frame, pt1=tuple(left_eye_rect[0:2]), pt2=tuple(left_eye_rect[2:4]), color=(255, 255, 255),
-                      thickness=2)
-        cv2.rectangle(frame, pt1=tuple(right_eye_rect[0:2]), pt2=tuple(right_eye_rect[2:4]), color=(255, 255, 255),
-                      thickness=2)
-        cv2.rectangle(frame, pt1=tuple(nose_rect[0:2]), pt2=tuple(nose_rect[2:4]), color=(255, 255, 255),
-                      thickness=2)
-        cv2.rectangle(frame, pt1=tuple(lip_rect[0:2]), pt2=tuple(lip_rect[2:4]), color=(255, 255, 255),
-                      thickness=2)
-        cv2.rectangle(frame, pt1=tuple(whole_face_rect[0:2]), pt2=tuple(whole_face_rect[2:4]), color=(255, 255, 255),
-                      thickness=2)
-        frame = cv2.flip(frame, 1)
 
+        cv2.rectangle(cropped_image, pt1=tuple(left_eye_rect[0:2]), pt2=tuple(left_eye_rect[2:4]), color=(255, 255, 255),
+                      thickness=2)
+        cv2.rectangle(cropped_image, pt1=tuple(right_eye_rect[0:2]), pt2=tuple(right_eye_rect[2:4]), color=(255, 255, 255),
+                      thickness=2)
+        cv2.rectangle(cropped_image, pt1=tuple(nose_rect[0:2]), pt2=tuple(nose_rect[2:4]), color=(255, 255, 255),
+                      thickness=2)
+        cv2.rectangle(cropped_image, pt1=tuple(lip_rect[0:2]), pt2=tuple(lip_rect[2:4]), color=(255, 255, 255),
+                      thickness=2)
+
+        #frame = cv2.flip(frame, 1)
+
+        # pred : 마스크 감지 모델 결과
+        pred = predict_mask(whole_face, maskNet).squeeze()
+        [mask, withoutMask] = pred
+        #print("Mask: ", mask, "Without mask: ", withoutMask)
+
+        label = "Mask" if mask > withoutMask else "No Mask"
+        color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+        label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+        cv2.putText(frame, label, (whole_face_rect[0], whole_face_rect[1]-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+        cv2.rectangle(frame, pt1=tuple(whole_face_rect[0:2]), pt2=tuple(whole_face_rect[2:4]), color=color,
+                      thickness=2)
         # 화면에 띄우기
-        cv2.imshow('frame', annotated_image)
-        cv2.imshow('frame2', frame)
-        cv2.imshow('frame3', whole_face)
-        print('face', whole_face.shape)
+        # cv2.imshow('frame', annotated_image)
+        cv2.imshow('frame', frame)
+        cv2.imshow('cropped_image', cropped_image)
+        # cv2.imshow('frame3', whole_face)
 
-        result = predict_mask(frame, maskNet)
-        print("result===========>", result)
 
         # 'q'버튼 누르면 종료하기
         if cv2.waitKey(1) & 0xFF == ord('q'): break
