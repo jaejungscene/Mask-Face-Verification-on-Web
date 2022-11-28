@@ -1,8 +1,12 @@
 import os
 import torch
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 from torch import nn
 from torch.utils.checkpoint import checkpoint
+from torchvision import transforms
 
 base_dir = os.path.dirname(__file__)
 
@@ -185,26 +189,13 @@ def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
 def iresnet18(pretrained=False, progress=True, **kwargs):
     return _iresnet('iresnet18', IBasicBlock, [2, 2, 2, 2], pretrained,
                     progress, **kwargs)
-
-
 def iresnet34(pretrained=False, progress=True, **kwargs):
     return _iresnet('iresnet34', IBasicBlock, [3, 4, 6, 3], pretrained,
                     progress, **kwargs)
-
-
 def iresnet50(pretrained=False, progress=True, **kwargs):
     return _iresnet('iresnet50', IBasicBlock, [3, 4, 14, 3], pretrained,
                     progress, **kwargs)
 
-
-def iresnet100(pretrained=False, progress=True, **kwargs):
-    return _iresnet('iresnet100', IBasicBlock, [3, 13, 30, 3], pretrained,
-                    progress, **kwargs)
-
-
-def iresnet200(pretrained=False, progress=True, **kwargs):
-    return _iresnet('iresnet200', IBasicBlock, [6, 26, 60, 6], pretrained,
-                    progress, **kwargs)
 
 back = torch.load(os.path.join(base_dir,"weights/backbone-r18.pth"), map_location=torch.device("cuda"))
 model = iresnet18()
@@ -212,11 +203,30 @@ model.load_state_dict(back)
 print("params: {:,}".format(sum([p.data.nelement() for p in model.parameters()])))
 print(model)
 
-inputs = torch.randn((1,3,112,112))
-print("inputs shape:", inputs.shape)
-with torch.no_grad():
-    model.eval()
-    outputs = model(inputs)
-print("outputs shape:", outputs.shape)
-print("Finish")
+# inputs = torch.randn((1,3,112,112))
+
+
+image_transforms = transforms.Compose([
+        transforms.Resize(size=(112,112)), 
+        transforms.ToTensor(),
+        transforms.Normalize(
+            [0.485, 0.456, 0.406], 
+            [0.229, 0.224, 0.225]
+        )
+    ])
+
+img = Image.open(os.path.join(base_dir,"images/jaejung.png"))
+img = np.array(img)
+print(img.shape)
+plt.imshow(img)
+plt.show()
+
+# image_transforms()
+
+# print("inputs shape:", inputs.shape)
+# with torch.no_grad():
+#     model.eval()
+#     outputs = model(inputs)
+# print("outputs shape:", outputs.shape)
+# print("Finish")
 # print(back)
