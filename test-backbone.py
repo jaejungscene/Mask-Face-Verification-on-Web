@@ -1,7 +1,10 @@
+import os
 import torch
 import torch
 from torch import nn
 from torch.utils.checkpoint import checkpoint
+
+base_dir = os.path.dirname(__file__)
 
 __all__ = ['iresnet18', 'iresnet34', 'iresnet50', 'iresnet100', 'iresnet200']
 using_ckpt = False
@@ -203,15 +206,17 @@ def iresnet200(pretrained=False, progress=True, **kwargs):
     return _iresnet('iresnet200', IBasicBlock, [6, 26, 60, 6], pretrained,
                     progress, **kwargs)
 
-back = torch.load("/Users/jaejungscene/Downloads/backbone-r18.pth", map_location=torch.device("cpu"))
+back = torch.load(os.path.join(base_dir,"weights/backbone-r18.pth"), map_location=torch.device("cuda"))
 model = iresnet18()
 model.load_state_dict(back)
 print("params: {:,}".format(sum([p.data.nelement() for p in model.parameters()])))
 print(model)
 
-inputs = torch.randn((32,3,112,112))
+inputs = torch.randn((1,3,112,112))
 print("inputs shape:", inputs.shape)
-outputs = model(inputs)
+with torch.no_grad():
+    model.eval()
+    outputs = model(inputs)
 print("outputs shape:", outputs.shape)
 print("Finish")
 # print(back)
