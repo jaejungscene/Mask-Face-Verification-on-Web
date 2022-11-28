@@ -5,7 +5,7 @@ import torch.nn as nn
 from torchvision.transforms import transforms
 from torch.utils.data import DataLoader
 from data_loader import masked_face_dataset as FaceDataset, ImageTransform as Transform
-from model import Net
+from FaceNet import Net
 import torch.optim as optim
 
 PATH = './dataset/mask_dataset'
