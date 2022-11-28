@@ -12,7 +12,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torchvision.models import resnet18
 from torchvision import transforms
-from FaceNet import FaceNet_ResNet18
 from model import get_model
 import os
 
