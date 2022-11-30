@@ -1,7 +1,7 @@
 import cv2
 import math
 import numpy as np
-import torch
+# import torch
 from data_loader import masked_face_dataset, ImageTransform
 import mediapipe as mp
 
