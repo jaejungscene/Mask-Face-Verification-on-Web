@@ -2,7 +2,7 @@ from torchvision.transforms import transforms
 import numpy as np
 from data_loader import eyes_dataset
 from torch.utils.data import DataLoader
-from model import Net
+from FaceNet import Net
 import torch
 
 
