@@ -1,25 +1,19 @@
 import cv2
-import math
 import numpy as np
-from data_loader import masked_face_dataset, ImageTransform
 import mediapipe as mp
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
 from tensorflow.keras.models import load_model
 import argparse
 import torch
-import torch.nn as nn
-from torch.nn import functional as F
-from torchvision.models import resnet18
 from torchvision import transforms
 from model import get_model
 import os
 
 base_dir = "C:/Users/gmk_0/source/repos/pythonProject/IT2/Computer-Vision-Project"
-model = get_model()
-model.eval()
-DESIRED_HEIGHT = 480
-DESIRED_WIDTH = 480
+iresnet = get_model()
+iresnet.eval()
+
 IMG_SIZE = (200, 200)
 LEFT_EYE = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398]
 RIGHT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246]
@@ -28,6 +22,7 @@ LIP = [0, 37, 39, 61, 84, 17, 314, 291, 267]
 num_of_frames = {"Mask": 0, "No Mask": 0}
 embeddings = []
 matched = 0
+threshold = 0.5
 
 
 # mediapipe configs
@@ -39,7 +34,6 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-m", "--model", type=str, default="mask_detector.model",
                 help="path to trained face mask detector model")
 args = vars(ap.parse_args())
-
 
 
 def landmarksDetection(img, face_landmarks, draw=False):
@@ -54,17 +48,6 @@ def landmarksDetection(img, face_landmarks, draw=False):
     # returning the list of tuples for each landmarks
     return mesh_coord
 
-def resize_and_show(image):
-    h, w = image.shape[:2]
-    if h < w:
-        img = cv2.resize(image, (DESIRED_WIDTH, math.floor(h/(w/DESIRED_WIDTH))))
-    else:
-        img = cv2.resize(image, (math.floor(w/(h/DESIRED_HEIGHT)), DESIRED_HEIGHT))
-
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    cv2.imshow('image', img)
-    cv2.waitKey(0) # 사용자가 아무 키를 누를때까지 이미지를 계속 띄워줌
-
 
 def crop(img, crop_points):
     x1, y1 = np.amin(crop_points, axis=0)
@@ -75,54 +58,21 @@ def crop(img, crop_points):
     h = w * IMG_SIZE[1] / IMG_SIZE[0]
 
     margin_x, margin_y = w / 2, h / 2
-
     min_x, min_y = int(cx - margin_x), int(cy - margin_y)
     max_x, max_y = int(cx + margin_x), int(cy + margin_y)
 
     rect = np.rint([min_x, min_y, max_x, max_y]).astype(int)
-
     img = img[rect[1]:rect[3], rect[0]:rect[2]]
-
     return img, rect
+
 
 def load_img():
     print("-"*50)
     print("loading image")
-    np_img = cv2.imread(os.path.join(base_dir, f"images/2.jpg"))
-    np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
-    if np_img.shape[-1] > 3:
-        print("remove alpha channel")
-        np_img = np_img[:, :, 0:3]
-    print(np_img.shape)
-    
-    max_size = max(np_img.shape[0:-1])
-    min_size = min(np_img.shape[0:-1])
+    np_img = np.load(os.path.join(base_dir, "images/6.npy")) #(1, 512)
+    print("np_img shape: ", np_img.shape)
 
-    image_transforms = transforms.Compose([
-        transforms.ToPILImage(),
-        transforms.CenterCrop((min_size, min_size)),
-        transforms.Resize(size=(112,112)), 
-        transforms.ToTensor(),
-        transforms.Normalize(
-            [0.485, 0.456, 0.406], 
-            [0.229, 0.224, 0.225]
-        )
-    ])
-
-    torch_img = image_transforms(np_img)
-    C, H, W = torch_img.size()
-    torch_img = torch_img.view(1, C, H, W)
-    print('input shape', torch_img.shape)
-    with torch.no_grad():
-        model.eval()
-        output = model(torch_img)
-        
-    print("output shape: ", output.shape)
-    return output
-
-# Read images with OpenCV.
-# images = {name: cv2.imread(name) for name in uploaded.keys()}
-# Preview the images.
+    return np_img
 
 # 이미지로 테스트
 """
@@ -143,22 +93,43 @@ for name, image in X.items():
     resize_and_show(image)
 """
 
+
 def predict_mask(face, model):
     # Image Preprocessing
-    #face = cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
     face_1 = cv2.resize(face, dsize=(224, 224))
-    face_2 = cv2.resize(face, dsize=(112, 112))
     face_1 = img_to_array(face_1)
-    face_2 = img_to_array(face_2)
     face_1 = face_1.reshape((1, 224, 224, 3))
     face_1 = preprocess_input(face_1)
-    pred = model.predict(face_1, batch_size=1)
-    face_2 = face_2.reshape((1, 112, 112, 3))
+    prediction = model.predict(face_1, batch_size=1)
 
-    return pred, face_2
+    face_2 = cv2.resize(face, dsize=(112, 112))
+    if face_2.shape[-1] > 3:
+        print("remove alpha channel")
+        face_2 = face_2[:, :, 0:3]
+
+    min_size = min(face_2.shape[0:-1])
+
+    image_transforms = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.CenterCrop((min_size, min_size)),
+        transforms.Resize(size=(112, 112)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            [0.485, 0.456, 0.406],
+            [0.229, 0.224, 0.225]
+        )
+    ])
+
+    torch_img = image_transforms(face_2)
+    print("torch img size: ", torch_img.size())
+    C, H, W = torch_img.size()
+    torch_img = torch_img.view(1, C, H, W)
+    print('input shape', torch_img.shape)
+
+    return prediction, torch_img
 
 def cos_sim(x:torch.tensor, y:torch.tensor)->torch.tensor:
-    return x@y.T / torch.norm(x)*torch.norm(y)
+    return x.view(-1).dot(y.view(-1)) / (torch.norm(x)*torch.norm(y))
 
 
 # 모델 불러오기
@@ -183,33 +154,10 @@ with mp_face_mesh.FaceMesh(
 
         if not results.multi_face_landmarks:
             continue
-        annotated_image = frame.copy()
         cropped_image = frame.copy()
 
         for face_landmarks in results.multi_face_landmarks:
             pass
-            """mp_drawing.draw_landmarks(
-                image=annotated_image,
-                landmark_list=face_landmarks,
-                connections=mp_face_mesh.FACEMESH_TESSELATION,
-                landmark_drawing_spec=None,
-                connection_drawing_spec=mp_drawing_styles
-                    .get_default_face_mesh_tesselation_style())
-            mp_drawing.draw_landmarks(
-                image=annotated_image,
-                landmark_list=face_landmarks,
-                connections=mp_face_mesh.FACEMESH_CONTOURS,
-                landmark_drawing_spec=None,
-                connection_drawing_spec=mp_drawing_styles
-                    .get_default_face_mesh_contours_style())
-            mp_drawing.draw_landmarks(
-                image=annotated_image,
-                landmark_list=face_landmarks,
-                connections=mp_face_mesh.FACEMESH_IRISES,
-                landmark_drawing_spec=None,
-                connection_drawing_spec=mp_drawing_styles
-                    .get_default_face_mesh_iris_connections_style())"""
-
 
         # Face_Landmark Crop
         mesh_coords = landmarksDetection(cropped_image, face_landmarks, False)
@@ -222,7 +170,7 @@ with mp_face_mesh.FaceMesh(
         #frame = cv2.flip(frame, 1)
 
         # pred : 마스크 감지 모델 결과
-        pred, face = predict_mask(whole_face, maskNet)
+        pred, torch_face = predict_mask(whole_face, maskNet)
         pred = pred.squeeze()
         [mask, withoutMask] = pred
         #print("Mask: ", mask, "Without mask: ", withoutMask)
@@ -245,21 +193,16 @@ with mp_face_mesh.FaceMesh(
 
         # No Mask / Mask 일정 프레임 도달시
         if num_of_frames["No Mask"] >= 5:
-
-            face = torch.from_numpy(face)
-            print(face.shape)
-            face = torch.permute(face, [0, 3, 1, 2])  # 모델에 집어넣기 위한 전처리
             with torch.no_grad():
-                embedding = model(face).squeeze()
-            print("embedding: ", len(embedding)) #128
+                embedding = iresnet(torch_face).squeeze()
+            print("embedding: ", len(embedding)) #512
             
-            loaded_image = load_img()
+            loaded_image = torch.Tensor(load_img())
             result = cos_sim(embedding, loaded_image)
             print("result", result)
-            if result > 80:
+            if result > threshold:
                 matched += 1
-                if matched > 7: break
-
+                if matched > 7: break # 7프레임 이상 같은 사람으로 인식되면 종료
 
         elif num_of_frames["Mask"] >= 5:
             left_eye, left_eye_rect = crop(cropped_image, left_eye_points)
@@ -280,15 +223,13 @@ with mp_face_mesh.FaceMesh(
 
 
         # 화면에 띄우기
-        # cv2.imshow('frame', annotated_image)
         cv2.imshow('frame', frame)
-        print(cropped_image.shape, face.shape)
+        print(cropped_image.shape, torch_face.shape)
         # 전처리된 이미지 보려면 주석 해제
         #squeezed_face = face.squeeze() # 전처리된 얼굴 이미지
         #cv2.imshow('preprocessed_face', squeezed_face)
 
         print(num_of_frames)
-
 
         # 'q'버튼 누르면 종료하기
         if cv2.waitKey(1) & 0xFF == ord('q'): break
