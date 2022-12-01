@@ -2,7 +2,8 @@
 .idea
 __pycache__/
 .venv
-test
-test-kong.ipynb
+test*.ipynb
+temp
 *.pth
 train/data
+weights

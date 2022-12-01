@@ -1,103 +1,122 @@
 import os
+from args import get_args_parser
+args = get_args_parser().parse_args()
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
+
 import time
-import torch
-import argparse
-from datetime import datetime
-import numpy as np
-import matplotlib.pyplot as plt
-import cv2
-import wandb
-from PIL import Image
-from torch import nn
-from torchvision import transforms
-from model import get_model
-from util import setup_seed, printSave_end_state, printSave_one_epoch, printSave_start_condition, save_checkpoint
 import dataset
+import numpy as np
+import wandb
+import random
+from datetime import datetime
+from log import save_checkpoint, printSave_one_epoch, printSave_start_condition, printSave_end_state
+from utils import accuracy, adjust_learning_rate, AverageMeter, get_learning_rate
+import torch
+import torch.nn as nn
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.optim
+import torch.utils.data
+import torch.utils.data.distributed
+import torchvision.models as models
+from torchvision.models import  EfficientNet_B6_Weights, EfficientNet_B0_Weights, EfficientNet_B7_Weights, EfficientNet_V2_M_Weights
+from optimizer import get_optimizer_and_scheduler
+from sklearn import metrics
+import pandas as pd
+
 import warnings
 warnings.filterwarnings("ignore")
+model_names = sorted(name for name in models.__dict__
+                     if name.islower() and not name.startswith("__")
+                     and callable(models.__dict__[name]))
 
-base_dir = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/"
 result_folder_name = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+best_acc = -1
+best_f1 = -1
 
-def get_args_parser():
-    parser = argparse.ArgumentParser(description='training CIFAR-10, CIFAR-100 for self-directed research')
-    parser.add_argument("--fold", default = 5, type = int)
-    parser.add_argument('--model', default='resnet', type=str, help='networktype: resnet')
-    parser.add_argument('--batch_size', default=128, type=int, metavar='N', help='batch size (default: 256)')
-    parser.add_argument('--img_size', default=112, type=int, metavar='N', help='input image size')
-    parser.add_argument('--lr', default=0.1, type=float, metavar='LR', help='initial learning rate')
-    parser.add_argument('--epoch', default=100, type=int, metavar='N', help='number of total epochs to run')                    
-    parser.add_argument('--cuda', type=str, default='0', help='select used GPU')
-    parser.add_argument('--wandb', type=int, default=1, help='choose activating wandb')
-    parser.add_argument('--seed', type=str, default=41, help='set seed')
-    parser.add_argument('--expname', default=result_folder_name, type=str, help='name of experiment')
-    parser.add_argument('-j', '--workers', default=4, type=int, metavar='W', help='number of data loading workers (default: 4)')
-    parser.add_argument('--device', default="cuda:0", type=str)
-    parser.add_argument('--cude', default="0", type=str)
-
-    optimizer = parser.add_argument_group('optimizer')
-    optimizer.add_argument('--optimizer', type=str, default='adamw', help='optimizer name')
-    optimizer.add_argument('--momentum', type=float, default=0.9, help='optimizer momentum')
-    optimizer.add_argument('--weight-decay', type=float, default=1e-3, help='optimizer weight decay')
-    optimizer.add_argument('--nesterov', action='store_true', default=False, help='use nesterov momentum')
-    optimizer.add_argument('--betas', type=float, nargs=2, default=[0.9, 0.999], help='adam optimizer beta parameter')
-    optimizer.add_argument('--eps', type=float, default=1e-6, help='optimizer eps')
-    optimizer.add_argument('--decay-rate', type=float, default=0.1, help='lr decay rate')
-
-    scheduler = parser.add_argument_group('scheduler')
-    scheduler.add_argument('--cosine-freq', type=int, default=5, help='cosine scheduler frequency')
-    scheduler.add_argument('--restart-epoch', type=int, default=20, help='warmup restart epoch period')
-    scheduler.add_argument('--scheduler', type=str, default='cosine', help='lr scheduler')
-    scheduler.add_argument('--three-phase', action='store_true', help='one cycle lr three phase')
-    scheduler.add_argument('--step-size', type=int, default=2, help='lr decay step size')
-    scheduler.add_argument('--min-lr', type=float, default=1e-6, help='lowest lr used for cosine scheduler')
-    scheduler.add_argument('--milestones', type=int, nargs='+', default=[150, 225], help='multistep lr decay step')
-    scheduler.add_argument('--warmup-epoch', type=int, default=5, help='warmup epoch')
-    scheduler.add_argument('--warmup-scheduler', type=str, default='linear', help='warmup lr scheduler type')
-    scheduler.add_argument('--warmup-lr', type=float, default=1e-4, help='warmup start lr')
-
-    return parser
+def seed_everything(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
+seed_everything(0) # Seed 고정
 
 
-def main(args):
-    
+def create_model(args, numberofclass):
+    # model = models.efficientnet_b6(weights=EfficientNet_B6_Weights.DEFAULT)
+    if args.model == "efficientnet_b0":
+        model = models.efficientnet_b0(weights=EfficientNet_B0_Weights.DEFAULT)
+        model.classifier[1] = nn.Linear(in_features=1280, out_features=numberofclass, bias=True)
+    elif args.model == "efficientnet_b6":
+        model = models.efficientnet_b6(weights=EfficientNet_B6_Weights.DEFAULT)
+        model.classifier[1] = nn.Linear(in_features=2304, out_features=numberofclass, bias=True)
+    elif args.model == "efficientnet_b7":
+        model = models.efficientnet_b7(weights=EfficientNet_B7_Weights.DEFAULT)
+        model.classifier[1] = nn.Linear(in_features=2560, out_features=numberofclass, bias=True)
+    elif args.model == "efficientnet_v2_m":
+        model = models.efficientnet_v2_m(weights=EfficientNet_V2_M_Weights.DEFAULT)
+        model.classifier[1] = nn.Linear(in_features=1280, out_features=numberofclass, bias=True)
+    # elif args.model == "resume":
+    #     print("check")
+    #     model = models.efficientnet_b6()
+    #     model.classifier[1] = nn.Linear(in_features=2304, out_features=numberofclass, bias=True)
+    #     checkpoint = torch.load("/home/ljj0512/private/workspace/CP_urban-datathon_CT/log/2022-11-10 08:31:16/checkpoint.pth.tar")
+    #     model.load_state_dict(checkpoint["state_dict"])
+    elif args.model == "resnet18": # test
+        model = models.resnet18()
+        model.fc = nn.Linear(in_features=512, out_features=numberofclass, bias=True)
+
+    print("=> model:\t'{}'".format(args.model))
+    print('=> the number of model parameters: {:,}'.format(sum([p.data.nelement() for p in model.parameters()])))
+    return nn.DataParallel(model).cuda()
+
+
+def run():
     start = time.time()
-    best_err1, best_err5 = 0, 0
+    global args, best_err1, best_err5, best_f1, best_acc
 
-    train_loader, val_loader, numberofclass = dataset.create_dataloader(args)
-    model = get_model(base_dir)
-    printSave_start_condition(args, sum([p.data.nelement() for p in model.parameters()]))
-    model = torch.nn.DataParallel(model).cuda()
+    train_loader, val_loader, test_loader, numberofclass = dataset.create_dataloader(args)
+    model = create_model(args, numberofclass)
+    printSave_start_condition(args)
 
     # define loss function (criterion) and optimizer
-    criterion = create.create_criterion(args, numberofclass)
+    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smooth).cuda()
     optimizer, scheduler = get_optimizer_and_scheduler(model, args, len(train_loader))
+    cudnn.benchmark = True
 
-    for epoch in range(0, args.epochs):
+    for epoch in range(0, args.epoch):
+        # train for one epoch
         train_loss = train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch, args)
-        err1, err5, val_loss = validate(val_loader, model, criterion, epoch, args)
+
+        # evaluate on validation set
+        f1, acc, val_loss = validate(val_loader, model, criterion, epoch, args)
 
         # remember best prec@1 and save checkpoint
-        is_best = err1 <= best_err1 # if err1 <= best_err1, is_best is True
-        if is_best:
-            best_err1 = err1
-            best_err5 = err5
-
+        if best_f1 < f1:
+            best_acc = acc
+            best_f1 = f1
+            save_checkpoint({
+                'epoch': epoch,
+                'best_f1': best_f1,
+                'best_acc': best_acc,
+                'state_dict': model.module.state_dict(),
+                'optimizer': optimizer.state_dict(),
+            }, args)
+            
         if args.wandb == True:
-            wandb.log({'top-1 err': err1, 'top-5 err':err5, 'train loss':train_loss, 'validation loss':val_loss})
-        print('Current best accuracy (top-1 and 5 error):\t', best_err1, 'and', best_err5)
-        save_checkpoint({
-            'epoch': epoch,
-            'arch': args.net_type,
-            'best_err1': best_err1,
-            'best_err5': best_err5,
-            'state_dict': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
-        }, is_best, args)
+            wandb.log({'valid f1 score':f1, 'acc':acc, 'train loss':train_loss, 'validation loss':val_loss})
+
+        print(f'Current best score =>\tf1: {best_f1} , acc: {best_acc}')
+        print("-"*100)
 
     total_time = time.time()-start
     total_time = time.strftime('%H:%M:%S', time.localtime(total_time))
-    printSave_end_state(args, best_err1, best_err5, total_time)
+    print(f"train finish (total time: {total_time}")
+    inference(model, test_loader)
 
 
 
@@ -107,14 +126,12 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
 
     # switch to train mode
     model.train()
-
+    total = 0
+    correct = 0
     end = time.time()
-    current_LR = get_learning_rate(optimizer)[0]
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
@@ -125,43 +142,32 @@ def train_one_epoch(train_loader, model, criterion, optimizer, scheduler, epoch,
 
         # compute output
         output = model(input)
-        if args.distil > 0:
-            loss = criterion(input, output, target)
-        else:
-            loss = criterion(output, target)
+        loss = criterion(output, target)
 
         # measure accuracy and record loss
-        if args.distil > 0:
-            err1, err5 = accuracy(output[0].data, target, topk=(1, 5))
-        else:
-            err1, err5 = accuracy(output.data, target, topk=(1, 5))
-
+        _, predicted = torch.max(output.data, dim=1)
+        total += target.size(0)
+        correct += predicted.eq(target.data).cpu().sum()
         losses.update(loss.item(), input.size(0))
-        top1.update(err1.item(), input.size(0))
-        top5.update(err5.item(), input.size(0))
-
         # compute gradient and do optimizer step
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         scheduler.step()
-
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-
-        if i % args.print_freq == 0 and args.verbose == True:
-            print('Epoch: [{0}/{1}][{2}/{3}]\t'
-                  'LR: {LR:.6f}\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Top 1-err {top1.val:.4f} ({top1.avg:.4f})\t'
-                  'Top 5-err {top5.val:.4f} ({top5.avg:.4f})'.format(
-                epoch, args.epochs, i, len(train_loader), LR=current_LR, batch_time=batch_time,
-                data_time=data_time, loss=losses, top1=top1, top5=top5))
-                
-    printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses)
+    acc = 100*correct/total
+    print('Epoch: [{0}/{1}]\t'
+            'LR: {LR:.6f}\t'
+            'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+            'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+            'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+            'Accuracy {acc:.4f}({cor}/{total})\t'
+            .format(epoch, args.epoch, 
+            LR=scheduler.get_lr()[0], batch_time=batch_time, data_time=data_time,
+            loss=losses, acc=acc, cor=correct, total=total))
+    # printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses)
     # print('* Epoch[{0}/{1}]\t Top 1-err {top1.avg:.3f}\t  Top 5-err {top5.avg:.3f}\t Train Loss {loss.avg:.3f}'.format(
     #     epoch, args.epochs, top1=top1, top5=top5, loss=losses))
 
@@ -174,105 +180,71 @@ def validate(val_loader, model, criterion, epoch, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
 
     # switch to evaluate mode
     model.eval()
-
+    pred_labels = []
+    true_labels = []
+    total = 0
+    correct = 0
     end = time.time()
     for i, (input, target) in enumerate(val_loader):
         data_time.update(time.time() - end)
+        true_labels += target.tolist()
+
+        input = input.cuda()
         target = target.cuda()
 
         output = model(input)
-        if args.distil > 0:
-            loss = criterion(input, output, target, val=True)
-            # if args.wandb == True:
-                # wandb.log({"roc": wandb.plot.roc_curve(target, output[0])})
-                # wandb.log({"pr": wandb.plots.precision_recall(target, output[0])})
-        else:
-            loss = criterion(output, target)
-            # if args.wandb == True:
-                # wandb.log({"roc": wandb.plot.roc_curve(target, output)})
-                # wandb.log({"pr": wandb.plots.precision_recall(target, output)})
+        loss = criterion(output, target)
 
         # measure accuracy and record loss
-        err1, err5 = accuracy(output.data, target, topk=(1, 5))
+        # err1, err5 = accuracy(output.data, target, topk=(1, 5))
+        _, predicted = torch.max(output.data, dim=1)
+        total += target.size(0)
+        correct += predicted.eq(target.data).cpu().sum()
+        pred_labels += predicted.cpu().tolist()
 
         losses.update(loss.item(), input.size(0))
-
-        top1.update(err1.item(), input.size(0))
-        top5.update(err5.item(), input.size(0))
 
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0 and args.verbose == True:
-            print('Test (on val set): [{0}/{1}][{2}/{3}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'Top 1-err {top1.val:.4f} ({top1.avg:.4f})\t'
-                  'Top 5-err {top5.val:.4f} ({top5.avg:.4f})'.format(
-                epoch, args.epochs, i, len(val_loader), batch_time=batch_time, loss=losses,
-                data_time=data_time, top1=top1, top5=top5))
+    f1_score = metrics.f1_score(y_true=true_labels, y_pred=pred_labels, average='macro')
+    acc = 100*correct/total
+    print('Test (on val set): [{0}/{1}]\t'
+            'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+            'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+            'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
+            'Accuracy {acc:.4f}({cor}/{total})\t'
+            'F1 {F1:.4f}\t'
+        .format(epoch, args.epoch, batch_time=batch_time, loss=losses,
+        data_time=data_time, acc=acc, cor=correct, total=total, F1=f1_score))
 
-    printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses, False)
-    return top1.avg, top5.avg, losses.avg
-
-
-
-if __name__ == "__main__":
-    args = get_args_parser().parse_args()
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
-    setup_seed(0)
-    if args.wandb:
-        wandb.init(project='comparsion', name=args.expname, entity='jaejungscene')
-    main(args)
+    # printSave_one_epoch(epoch, args, batch_time, data_time, top1, top5, losses, False)
+    # print('* Epoch[{0}/{1}]\t Top 1-err {top1.avg:.3f}\t  Top 5-err {top5.avg:.3f}\t Test Loss {loss.avg:.3f}'.format(
+    #     epoch+1, args.epochs, top1=top1, top5=top5, loss=losses))
+    return f1_score, acc, losses.avg
 
 
-
-
-# vector_list = []
-# for i in range(4):
-#     print("-"*50)
-#     np_img = cv2.imread(os.path.join(base_dir,f"images/{i}.jpg"))
-#     np_img = cv2.cvtColor(np_img, cv2.COLOR_RGB2BGR)
-#     # np_img = np.array(img)
-#     if np_img.shape[-1] > 3:
-#         print("alpha channel remove")
-#         np_img = np_img[:,:,0:3]
-
-#     print(np_img.shape)
-#     plt.imshow(np_img)
-#     plt.show()
-
-#     max_size = max(np_img.shape[0:-1])
-#     min_size = min(np_img.shape[0:-1])
-#     image_transforms = transforms.Compose([
-#             transforms.ToPILImage(),
-#             transforms.CenterCrop((min_size,min_size)),
-#             transforms.Resize(size=(112,112)), 
-#             transforms.ToTensor(),
-#             transforms.Normalize(
-#                 [0.485, 0.456, 0.406], 
-#                 [0.229, 0.224, 0.225]
-#             )
-#         ])
-
-#     torch_img = image_transforms(np_img)
-#     C, H, W = torch_img.size()
-#     torch_img = torch_img.view(1,C,H,W)
-#     print(torch_img.shape)
-#     plt.imshow(torch_img.view(C,H,W).permute(1,2,0))
-#     plt.show()
-#     print("inputs shape:", torch_img.shape)
+def inference(model, test_loader):
+    model.cuda()
+    model.eval()
+    preds = []
+    submit = pd.read_csv("./1001_sample_submission.csv")
+    with torch.no_grad():
+        for img in (test_loader):
+            img = img.cuda()
+            output = model(img)
+            _, predicted = torch.max(output.data, dim=1)
+            preds += predicted.cpu().tolist()
     
-#     with torch.no_grad():
-#         model.eval()
-#         outputs = model(torch_img)
-#     print("outputs shape:", outputs.shape)
-#     vector_list.append(outputs)
+    submit['result'] = preds
+    submit.to_csv('./1001_submission.csv', index=False)
+
+
+if __name__ == '__main__':
+    if args.wandb == True:
+        wandb.init(project='CP_urban-datathon', name=args.expname, entity='jaejungscene')
+    run()
