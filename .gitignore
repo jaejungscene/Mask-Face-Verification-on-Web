@@ -5,3 +5,4 @@ __pycache__/
 test
 test-kong.ipynb
 *.pth
+train/data
