@@ -47,9 +47,9 @@ class TestDataset(Dataset):
 def create_dataloader(args):
     train_df = pd.read_csv("train_df.csv")
     val_df = pd.read_csv("val_df.csv")
-    train_set = CustomDataset(train_df, transform=get_transform("train"))
-    val_set = CustomDataset(val_df, transform=get_transform("val"))
-    test_set = TestDataset(transform=get_transform("test"))
+    train_set = CustomDataset(train_df, transform=get_transform.train)
+    val_set = CustomDataset(val_df, transform=get_transform.val)
+    test_set = TestDataset(transform=get_transform.test)
     # train_set = ImageFolder(root = DATA_DIR+"/Train",
     #                     transform = get_transform("train"))
 
@@ -71,25 +71,18 @@ def create_dataloader(args):
     return train_loader, val_loader,  test_loader, 5
 
 
-def get_transform(param):
-    if param == "train":
-        transform = transforms.Compose([
-                        transforms.RandomHorizontalFlip(),
-                        transforms.RandomVerticalFlip(),
-                        transforms.RandomAdjustSharpness(sharpness_factor=2),
-                        transforms.ToTensor(),
-                    ])
-    elif param == "val":
-        transform = transforms.Compose([
-                        transforms.RandomHorizontalFlip(),
-                        transforms.RandomVerticalFlip(),
-                        transforms.RandomAdjustSharpness(sharpness_factor=2),
-                        transforms.ToTensor(),
-                    ])
-    elif param == "test":
-        transform = transforms.Compose([
-                        # transforms.RandomAdjustSharpness(sharpness_factor=2),
-                        transforms.ToTensor(),
-                    ])
-    return transform
+# def get_transform(param):
+class get_transform:
+    train = transforms.Compose([
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomAdjustSharpness(sharpness_factor=2),
+                transforms.ToTensor(),
+            ])
+    val = transforms.Compose([
+                transforms.ToTensor(),
+            ])
+    test = transforms.Compose([
+                transforms.ToTensor(),
+            ])
     

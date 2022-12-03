@@ -24,27 +24,6 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    if args.dataset.startswith('cifar'):
-        lr = args.lr * (0.1 ** (epoch // (args.epochs * 0.5))) * (0.1 ** (epoch // (args.epochs * 0.75)))
-    elif args.dataset == ('imagenet'):
-        if args.epochs == 300:
-            lr = args.lr * (0.1 ** (epoch // 75))
-        else:
-            lr = args.lr * (0.1 ** (epoch // 30))
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-
-def get_learning_rate(optimizer):
-    lr = []
-    for param_group in optimizer.param_groups:
-        lr += [param_group['lr']]
-    return lr
-
-
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
     maxk = max(topk)

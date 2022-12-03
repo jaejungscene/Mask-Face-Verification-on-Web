@@ -15,7 +15,7 @@ def get_args_parser():
     parser.add_argument('--expname', default=result_folder_name, type=str, help='name of experiment')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='W', help='number of data loading workers (default: 4)')
     parser.add_argument('--device', default="cuda:0", type=str)
-    parser.add_argument('--cude', default="0", type=str)
+    parser.add_argument('--verbose', type=bool, default=False)
 
     loss = parser.add_argument_group('loss')
     loss.add_argument('--label_smooth', type=float, default=0.0, help='optimizer name')
