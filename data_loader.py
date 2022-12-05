@@ -6,7 +6,6 @@ import numpy as np
 from torchvision import transforms
 
 
-
 class masked_face_dataset(Dataset):
     def __init__(self, dir_path, transform=None, phase='train'):
         self.dir_path = dir_path
@@ -47,6 +46,7 @@ class masked_face_dataset(Dataset):
 
     def __len__(self):
         return len(self.file_list)
+
 
 class ImageTransform():
     def __init__(self, resize, mean, std):
