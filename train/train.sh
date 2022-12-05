@@ -1,3 +1,1 @@
-# python train.py --model resume --lr 1e-5 --eta_max 1e-4 --epoch 50 --batch_size 16 --wandb 1 --cuda 2,3,4,5 --optimizer adamw --scheduler cosinerestarts
-python train.py --model efficientnet_b6 --lr 1e-5 --eta_max 1e-4 --epoch 50 --batch_size 16 --wandb 1 --cuda 2,3,4,5 --optimizer adamw --scheduler cosinerestarts --label_smooth 0.1
-# python train.py --model efficientnet_v2_m --lr 1e-5 --eta_max 1e-4 --epoch 50 --batch_size 16 --wandb 1 --cuda 2,3,4,5 --optimizer adamw --scheduler cosinerestarts --label_smooth 0.1
+python train.py --eta_max 1e-3 --lr 1e-5 --batch_size 64 --epoch 20 --weight_decay 5e-4 --wandb 1 --device cuda:1 --verbose True

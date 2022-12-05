@@ -1,19 +1,24 @@
-|Model|CV|LB| EPOCHS | Transforms |
- |---|---|---|---|---|
-|efficientnet-b0|0.92|0.209433|8|rm_vt_flip|
-|efficientnet-b6|0.95|0.212622|8|rm_vt_flip|
-|efficientnet-b6|Bad|Bad|8|rm_hr_flip|
-|efficientnet-b6| 0.95 | 0.212623 |8|rm_vt_flip, rm_shap|
-|efficientnet-b6| Bad|Bad |8|RandomVerticalFlip, RandomAdjustSharpness, TrivialAugmentWide|
-|efficientnet-b6| Bad|Bad |8|RandomVerticalFlip, TrivialAugmentWide|
-|efficientnet-b6| Bad|Bad |8|RandomVerticalFlip, Normalization|
-|efficientnet-b6| --|-- |8|RandomVerticalFlip, Normalization, 
-| RESTART | RESTART | RESTART | RESTART | RESTART |
-|3_efficientnet-b6| 0.95 | 0.99038 | 8 |rm_vt_flip, rm_shap|
-|3_efficientnet-b6| -- | -- | 8 | rm_vt_flip, rm_shap, Colorjitter|
-|efficientnet-b6 (sgd)| 0.98 | -- | 50 | rm_vt_flip(0.5) / rm_hr_flip(0.5) / rm_sharp(2) |
-|efficientnet-b6 (adamw)| 0.99 | -- | 10 | rm_vt_flip(0.5) / rm_hr_flip(0.5) / rm_sharp(2) |
-|efficientnet-b6 (adamw)| 0.99 | -- | 10 | rm_vt_flip(0.5) / rm_hr_flip(0.5) / rm_sharp(2) / label smoothing |
-|efficientnet-v2_m (adamw)| 0.99 | -- | 10 | rm_vt_flip(0.5) / rm_hr_flip(0.5) / rm_sharp(2) |
-|efficientnet-v2_m (adamw)| 0.99 | -- | 10 | rm_vt_flip(0.5) / rm_hr_flip(0.5) / rm_sharp(2) / label smoothing(0.1) |
+# Used Dataset
+- Training Dataset
+  - MS1MV2 (IDs: 85K, Total Images: 5.8M) => [download site](https://github.com/deepinsight/insightface/tree/master/recognition/_datasets_#ms1m-arcface-85k-ids58m-images-57)
+- Validation Dataset
+  - All of LFW (IDs: 5K, Total Images: 13K) => [download site](http://vis-www.cs.umass.edu/lfw/#download)
+- Test Dataset (in order to find threshold for verification)
+  - LFW with more than one Image (IDs: 1.68K, Total Images: 9.16K)
+  - Face Mask Dataset Generated GAN (FMDG) in kaggle => [download site](https://www.kaggle.com/datasets/prasoonkottarathil/face-mask-lite-dataset)
+  - Natural Face Mask Dataset (NFMD) in kaggle => [download site](https://www.kaggle.com/datasets/ashishjangra27/face-mask-12k-images-dataset)
+
+
+<br>
+<br>
+
+# Result
+
+| Loss function | LFW | FMDG | NFMD
+|---|---|---|---|
+| arcface() | 0.92 | 0.209433 | 0.5 |
+| arcface() | 0.92 | 0.209433 | 0.5 |
+| ***arcface()*** | ***0.92*** | ***0.209433*** | ***0.5*** &nbsp; <= &nbsp; best |
+| cosface() | 0.92 | 0.209433 | 0.5 |
+
 
