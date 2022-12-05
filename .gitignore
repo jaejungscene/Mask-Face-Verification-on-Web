@@ -1,7 +1,9 @@
 *.zip
 .idea
 __pycache__/
-./node_modules
 .venv
-test
+test*.ipynb
+temp
 *.pth
+train/data
+weights
