@@ -74,7 +74,7 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if args.verbose and i%100==0:
+        if args.verbose:
             acc = 100*correct/total
             print('Epoch: [{0}({1})/{2}]\t'
                     'LR: {LR:.6f}\t'
@@ -151,17 +151,11 @@ def main(args):
     margin_loss = CombinedMarginLoss(64, args.m1, args.m2, args.m3)
     fc_softmax = FCSoftmax(margin_loss, 512, train_class_num)
     fc_softmax = fc_softmax.to(args.device)
-
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smooth).to(args.device)
     optimizer, scheduler = get_optimizer_and_scheduler(model, fc_softmax, args, len(train_loader))
 
-    # if args.resume:
-    #     checkpoint = torch.load(os.path.join(ROOT_DIR,"weights/baseline-arcface.pth"), map_location=torch.device("cpu"))
-    #     model.load_state_dict(checkpoint)
-
-
     printSave_start_condition(args)
-    for epoch in range(1, args.epoch+1):
+    for epoch in range(1, 3):
         train_acc, train_loss = train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, scheduler, epoch, args)
         # val_acc, val_loss = validate(val_loader, model, criterion, epoch, args)
 
@@ -173,7 +167,6 @@ def main(args):
                 'epoch': epoch,
                 'best_acc': best_acc,
                 'state_dict': model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
-                'fc_state_dict': fc_softmax.state_dict(),
                 'optimizer': optimizer.state_dict(),
             }, args)
             print(f'Current best score =>\t: {best_acc}  |  Changed!!!!')

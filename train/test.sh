@@ -1,0 +1,1 @@
+python test.py --lr 1e-5 --eta_max 1e-4 --batch_size 64 --wandb 0 --device cuda:3 --verbose True

@@ -7,3 +7,5 @@ temp
 *.pth
 train/data
 weights
+wandb
+./react-app/node_modules
