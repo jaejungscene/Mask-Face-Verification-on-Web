@@ -7,3 +7,4 @@ temp
 *.pth
 train/data
 weights
+*__init__.py
