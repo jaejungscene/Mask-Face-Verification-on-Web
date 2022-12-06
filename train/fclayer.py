@@ -11,7 +11,9 @@ class FCSoftmax(nn.Module):
         nn.init.xavier_uniform_(self.weights)
     
     def forward(self, embed_vec: torch.Tensor, labels: torch.Tensor):
+        # logits is "cos(theta)"
         logits = linear(normalize(embed_vec), normalize(self.weights)).clamp(-1,1)
+        # arcface: cos(target_theta + margin), cosface: cos(target_theta)-margin
         logits = self.margin_softmax(logits, labels)
         return logits
 

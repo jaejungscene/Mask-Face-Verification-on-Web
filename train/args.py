@@ -17,6 +17,7 @@ def get_args_parser():
     parser.add_argument('--cuda', type=str, default='0', help='select used GPU')
     parser.add_argument('--local_rank', type=int, default=0, help='select used GPU')
     parser.add_argument('--verbose', type=bool, default=False)
+    parser.add_argument('--verbose_freq', type=int, default=1000)
 
     loss = parser.add_argument_group('loss')
     loss.add_argument('--label_smooth', type=float, default=0.0, help='optimizer name')

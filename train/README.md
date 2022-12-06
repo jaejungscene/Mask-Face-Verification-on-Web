@@ -14,11 +14,12 @@
 
 # Result
 
-| Loss function | LFW | FMDG | NFMD
-|---|---|---|---|
-| arcface() | 0.92 | 0.209433 | 0.5 |
-| arcface() | 0.92 | 0.209433 | 0.5 |
-| ***arcface()*** | ***0.92*** | ***0.209433*** | ***0.5*** &nbsp; <= &nbsp; best |
-| cosface() | 0.92 | 0.209433 | 0.5 |
+| model(#param) | Loss function | LFW | FMDG | NFMD
+|---|---|---|---|---|
+| resnet50(25M)|
+|iresnet18(24M)| arcface() | 0.92 | 0.209433 | 0.5 |
+|iresnet18(24M)| arcface() | 0.92 | 0.209433 | 0.5 |
+|iresnet18(24M)| ***arcface()*** | ***0.92*** | ***0.209433*** | ***0.5*** &nbsp; <= &nbsp; best |
+|iresnet18(24M)| cosface() | 0.92 | 0.209433 | 0.5 |
 
 

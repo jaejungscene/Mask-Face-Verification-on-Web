@@ -74,24 +74,24 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if args.verbose and i%100==0:
+        if args.verbose and i%args.verbose_freq==0:
             acc = 100*correct/total
-            print('Epoch: [{0}({1})/{2}]\t'
+            print('Epoch[{0}({1})/{2}]\t'
                     'LR: {LR:.6f}\t'
-                    'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                    'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                    'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                    'Accuracy {acc:.4f}({cor}/{total})\t'
+                    'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                    'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                    'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
+                    'Accuracy: {acc:.4f}({cor}/{total})\t'
                     .format(epoch, i+1, args.epoch, 
                     LR=scheduler.get_lr()[0], batch_time=batch_time, data_time=data_time,
                     loss=losses, acc=acc, cor=correct, total=total))
     acc = 100*correct/total
-    print('Epoch: [{0}/{1}]\t'
+    print('Epoch[{0}/{1}]\t'
             'LR: {LR:.6f}\t'
-            'Time {batch_time.val:.3f} ({epoch_time.avg:.3f})\t'
-            'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-            'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-            'Accuracy {acc:.4f}({cor}/{total})\t'
+            'Time: {epoch_time.val:.3f} ({epoch_time.avg:.3f})\t'
+            'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
+            'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
+            'Accuracy: {acc:.4f}({cor}/{total})\t'
             .format(epoch, args.epoch, 
             LR=scheduler.get_lr()[0], epoch_time=batch_time, data_time=data_time,
             loss=losses, acc=acc, cor=correct, total=total))
@@ -130,10 +130,10 @@ def validate(val_loader, model, criterion, epoch, args):
         end = time.time()
     acc = 100*correct/total
     print('Test (on val set): [{0}/{1}]\t'
-            'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-            'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-            'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-            'Accuracy {acc:.4f}({cor}/{total})\t'
+            'Time: {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+            'Data: {data_time.val:.3f} ({data_time.avg:.3f})\t'
+            'Loss: {loss.val:.4f} ({loss.avg:.4f})\t'
+            'Accuracy: {acc:.4f}({cor}/{total})\t'
             .format(epoch, args.epoch, batch_time=batch_time, loss=losses,
             data_time=data_time, acc=acc, cor=correct, total=total))
 
@@ -146,9 +146,12 @@ def main(args):
     start = time.time()
 
     train_loader, train_class_num, val_loader, val_class_num = get_dataloader(args)
-    model = get_model(ROOT_DIR)
+    # iresnet model
+    model = get_model(ROOT_DIR) 
     model = model.to(args.device)
+    # margin loss(arcface, cosface, shpereface)
     margin_loss = CombinedMarginLoss(64, args.m1, args.m2, args.m3)
+    # fclayer and margin softmax
     fc_softmax = FCSoftmax(margin_loss, 512, train_class_num)
     fc_softmax = fc_softmax.to(args.device)
 

@@ -74,7 +74,7 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
-        if args.verbose:
+        if args.verbose and i%args.verbose_freq==0:
             acc = 100*correct/total
             print('Epoch: [{0}({1})/{2}]\t'
                     'LR: {LR:.6f}\t'
@@ -85,10 +85,11 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
                     .format(epoch, i+1, args.epoch, 
                     LR=scheduler.get_lr()[0], batch_time=batch_time, data_time=data_time,
                     loss=losses, acc=acc, cor=correct, total=total))
+        break
     acc = 100*correct/total
     print('Epoch: [{0}/{1}]\t'
             'LR: {LR:.6f}\t'
-            'Time {batch_time.val:.3f} ({epoch_time.avg:.3f})\t'
+            'Time {epoch_time.val:.3f} ({epoch_time.avg:.3f})\t'
             'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
             'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
             'Accuracy {acc:.4f}({cor}/{total})\t'
@@ -146,16 +147,25 @@ def main(args):
     start = time.time()
 
     train_loader, train_class_num, val_loader, val_class_num = get_dataloader(args)
-    model = get_model(ROOT_DIR)
+    # iresnet model
+    model = get_model(ROOT_DIR) 
     model = model.to(args.device)
+    # margin loss(arcface, cosface, shpereface)
     margin_loss = CombinedMarginLoss(64, args.m1, args.m2, args.m3)
+    # fclayer and margin softmax
     fc_softmax = FCSoftmax(margin_loss, 512, train_class_num)
     fc_softmax = fc_softmax.to(args.device)
+
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smooth).to(args.device)
     optimizer, scheduler = get_optimizer_and_scheduler(model, fc_softmax, args, len(train_loader))
 
+    # if args.resume:
+    #     checkpoint = torch.load(os.path.join(ROOT_DIR,"weights/baseline-arcface.pth"), map_location=torch.device("cpu"))
+    #     model.load_state_dict(checkpoint)
+
+
     printSave_start_condition(args)
-    for epoch in range(1, 3):
+    for epoch in range(1, 2):
         train_acc, train_loss = train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, scheduler, epoch, args)
         # val_acc, val_loss = validate(val_loader, model, criterion, epoch, args)
 
@@ -167,16 +177,14 @@ def main(args):
                 'epoch': epoch,
                 'best_acc': best_acc,
                 'state_dict': model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
+                'fc_state_dict': fc_softmax.state_dict(),
                 'optimizer': optimizer.state_dict(),
             }, args)
             print(f'Current best score =>\t: {best_acc}  |  Changed!!!!')
         else:
             print(f'Current best score =>\t: {best_acc}')
         print("-"*100)
-            
-        if args.wandb == True:
-            # wandb.log({'validation accuracy':val_acc, 'validation loss':val_loss, 'train loss':train_loss, 'train accuracy':train_acc})
-            wandb.log({'train loss':train_loss, 'train accuracy':train_acc})
+    
 
     total_time = time.time()-start
     total_time = time.strftime('%H:%M:%S', time.localtime(total_time))
@@ -186,6 +194,4 @@ def main(args):
 
 if __name__ == '__main__':
     args = get_args_parser().parse_args()
-    if args.wandb == True:
-        wandb.init(project='mask_face_verification', name=args.expname, entity='jaejungscene')
     main(args)

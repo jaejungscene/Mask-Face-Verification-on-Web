@@ -1,3 +1,13 @@
+"""
+@inproceedings{deng2019arcface,
+  title={Arcface: Additive angular margin loss for deep face recognition},
+  author={Deng, Jiankang and Guo, Jia and Xue, Niannan and Zafeiriou, Stefanos},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  pages={4690--4699},
+  year={2019}
+}
+"""
+
 import torch
 import math
 
@@ -12,11 +22,10 @@ class CombinedMarginLoss(torch.nn.Module):
         super().__init__()
         self.s = s
         self.m1 = m1
-        self.m2 = m2
-        self.m3 = m3
+        self.m2 = m2 # arcface margin
+        self.m3 = m3 # cosface margin
         self.interclass_filtering_threshold = interclass_filtering_threshold
         
-        # For ArcFace
         self.cos_m = math.cos(self.m2)
         self.sin_m = math.sin(self.m2)
         self.theta = math.cos(math.pi - self.m2)
@@ -37,11 +46,14 @@ class CombinedMarginLoss(torch.nn.Module):
                 tensor_mul = 1 - dirty    
             logits = tensor_mul * logits
 
+        # target_logit is targets that will be given margins.
         target_logit = logits[index_positive, labels[index_positive].view(-1)]
 
-        if self.m1 == 1.0 and self.m3 == 0.0:
+        # m1 is flag for which margin loss will be activated
+        if self.m1 == 1.0 and self.m2 > 0.0:   # arcface margin
             sin_theta = torch.sqrt(1.0 - torch.pow(target_logit, 2))
-            cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m  # cos(target+margin)
+            # add margin to cos_theta
+            cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m  # cos(target_theta+margin)
             if self.easy_margin:
                 final_target_logit = torch.where(
                     target_logit > 0, cos_theta_m, target_logit)
@@ -51,18 +63,31 @@ class CombinedMarginLoss(torch.nn.Module):
             logits[index_positive, labels[index_positive].view(-1)] = final_target_logit
             logits = logits * self.s
         
-        elif self.m3 > 0:
+        elif self.m1 == 0.0 and self.m3 > 0.0: # cosface margin
             final_target_logit = target_logit - self.m3
             logits[index_positive, labels[index_positive].view(-1)] = final_target_logit
             logits = logits * self.s
+        
+        elif self.m1 == 0.5 and self.m2 > 0.0 and self.m3 > 0.0:
+            sin_theta = torch.sqrt(1.0 - torch.pow(target_logit, 2))
+            cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m  # cos(target_theta+margin)
+            if self.easy_margin:
+                final_target_logit = torch.where(
+                    target_logit > 0, cos_theta_m, target_logit)
+            else:
+                final_target_logit = torch.where(
+                    target_logit > self.theta, cos_theta_m, target_logit - self.sinmm)
+            final_target_logit = final_target_logit - self.m3
+            logits[index_positive, labels[index_positive].view(-1)] = final_target_logit
+            logits = logits * self.s
+
         else:
             raise        
 
         return logits
 
+
 class ArcFace(torch.nn.Module):
-    """ ArcFace (https://arxiv.org/pdf/1801.07698v1.pdf):
-    """
     def __init__(self, s=64.0, margin=0.5):
         super(ArcFace, self).__init__()
         self.scale = s
