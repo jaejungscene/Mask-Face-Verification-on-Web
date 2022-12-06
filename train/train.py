@@ -147,13 +147,11 @@ def main(args):
 
     train_loader, train_class_num, val_loader, val_class_num = get_dataloader(args)
     # iresnet model
-    model = get_model(ROOT_DIR) 
-    model = model.to(args.device)
-    # margin loss(arcface, cosface, shpereface)
-    margin_loss = CombinedMarginLoss(64, args.m1, args.m2, args.m3)
+    model = get_model(ROOT_DIR).to(args.device)
+    # margin loss(arcface, cosface)
+    margin_loss = CombinedMarginLoss(64, args.m1, args.m2, args.m3).to(args.device)
     # fclayer and margin softmax
-    fc_softmax = FCSoftmax(margin_loss, 512, train_class_num)
-    fc_softmax = fc_softmax.to(args.device)
+    fc_softmax = FCSoftmax(margin_loss, 512, train_class_num).to(args.device)
 
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smooth).to(args.device)
     optimizer, scheduler = get_optimizer_and_scheduler(model, fc_softmax, args, len(train_loader))

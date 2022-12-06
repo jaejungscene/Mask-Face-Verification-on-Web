@@ -27,6 +27,9 @@ def printSave_end_state(args, best_err1, best_err5, total_time):
 
 
 def printSave_start_condition(args):
+    print("=> m1:\t'{}'".format(args.m1))
+    print("=> m2:\t'{}'".format(args.m2))
+    print("=> m3:\t'{}'".format(args.m3))
     print("=> batch size:\t'{}'".format(args.batch_size))
     print("=> epochs:\t'{}'".format(args.epoch))
     print("=> lr:\t\t'{}'".format(args.lr))

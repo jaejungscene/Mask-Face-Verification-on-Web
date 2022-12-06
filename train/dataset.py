@@ -143,6 +143,7 @@ def get_dataloader(
         dataset=train_dataset,
         batch_size=args.batch_size,
         num_workers=args.workers,
+        shuffle=True
     )
 
     valid_class_num = 5749
