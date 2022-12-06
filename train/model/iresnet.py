@@ -1,3 +1,13 @@
+"""
+@inproceedings{deng2019arcface,
+  title={Arcface: Additive angular margin loss for deep face recognition},
+  author={Deng, Jiankang and Guo, Jia and Xue, Niannan and Zafeiriou, Stefanos},
+  booktitle={Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition},
+  pages={4690--4699},
+  year={2019}
+}
+"""
+
 import os
 import torch
 import torch
@@ -185,6 +195,7 @@ def _iresnet(arch, block, layers, pretrained, progress, **kwargs):
     if pretrained:
         raise ValueError()
     return model
+
 def iresnet18(pretrained=False, progress=True, **kwargs):
     return _iresnet('iresnet18', IBasicBlock, [2, 2, 2, 2], pretrained,
                     progress, **kwargs)

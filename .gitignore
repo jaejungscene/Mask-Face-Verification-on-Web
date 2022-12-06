@@ -6,5 +6,7 @@ test*.ipynb
 temp
 *.pth
 train/data
+train/log
 weights
-*__init__.py
+wandb
+./react-app/node_modules
