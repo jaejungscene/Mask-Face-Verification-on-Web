@@ -1,0 +1,29 @@
+.bg-L {
+  height: 675px;
+  position: relative;
+  display: table-cell;
+  background-image: url(../../image/bg-L.png);
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: center;
+  vertical-align: top;
+  box-sizing: border-box;
+  width: 50%;
+  z-index: 999;
+  text-align: left;
+}
+
+.bg-R {
+  position: relative;
+  display: table-cell;
+  background-image: url(../../image/bg-R.png);
+  background-repeat: no-repeat;
+  background-position: center;
+  vertical-align: top;
+  box-sizing: border-box;
+  width: 50%;
+  text-align: left;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 45px 30px 30px;
+}
