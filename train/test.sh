@@ -1,1 +1,1 @@
-python test.py --m1 0.0 --m3 0.35 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 128 --epoch 20 --weight_decay 5e-4 --device cuda:8 --verbose True
+python test.py --m1 0.0 --m3 0.35 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 128 --epoch 20 --weight_decay 5e-4 --device cuda:8 --cutout_p 0.5 --verbose True

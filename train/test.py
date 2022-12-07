@@ -57,6 +57,7 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
         # load datat from cpu to gpu
         inputs, targets = inputs.to(args.device), targets.cuda(args.device)
         if args.cutout_p > 0.0:
+            print(f"cutout {args.cutout_p}")
             inputs = cutout_mask(inputs, args.cutout_p)
         # compute output
         embed_vec = model(inputs)
@@ -188,7 +189,7 @@ def main(args):
         break
     total_time = time.time()-start
     total_time = time.strftime('%H:%M:%S', time.localtime(total_time))
-    print(f"finish training (total time: {total_time})")
+    print(f"finish training (total time): {total_time}")
 
 
 
