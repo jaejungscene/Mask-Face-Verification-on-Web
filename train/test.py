@@ -5,7 +5,6 @@ from args import get_args_parser
 # os.environ['CUDA_VISIBLE_DEVICES'] = args.cuda
 
 import time
-from dataset import get_dataloader
 import numpy as np
 import wandb
 import random
@@ -21,7 +20,7 @@ import torch.utils.data.distributed
 from marginloss import CombinedMarginLoss
 from fclayer import FCSoftmax
 from optimizer import get_optimizer_and_scheduler
-from sklearn import metrics
+from dataset import get_dataloader, cutout_mask
 from model import get_model
 import warnings
 warnings.filterwarnings("ignore")
@@ -57,6 +56,8 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
         end = time.time()
         # load datat from cpu to gpu
         inputs, targets = inputs.to(args.device), targets.cuda(args.device)
+        if args.cutout_p > 0.0:
+            inputs = cutout_mask(inputs, args.cutout_p)
         # compute output
         embed_vec = model(inputs)
         logits = fc_softmax(embed_vec, targets)
@@ -85,6 +86,7 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
                     .format(epoch, i+1, args.epoch, 
                     LR=scheduler.get_lr()[0], batch_time=batch_time, data_time=data_time,
                     loss=losses, acc=acc, cor=correct, total=total))
+        break
     acc = 100*correct/total
     print('Epoch[{0}/{1}]\t'
             'LR: {LR:.6f}\t'
@@ -100,30 +102,26 @@ def train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, sched
 
 
 
-def validate(val_loader, model, criterion, epoch, args):
+def validate(val_loader, model, fc_softmax, criterion, epoch, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
 
-    # switch to evaluate mode
     model.eval()
-    pred_labels = []
-    true_labels = []
+    fc_softmax.eval()
     total = 0
     correct = 0
     end = time.time()
     for i, (inputs, targets) in enumerate(val_loader):
         data_time.update(time.time() - end)
-        true_labels += targets.tolist()
-        inputs, targets = inputs.cuda(), targets.cuda()
-        output = model(inputs)
-        loss = criterion(output, targets)
+        inputs, targets = inputs.to(args.device), targets.to(args.device)
+        embed_vec = model(inputs)
+        outputs = fc_softmax(embed_vec, targets)
+        loss = criterion(outputs, targets)
         # measure accuracy and record loss
-        # err1, err5 = accuracy(output.data, targets, topk=(1, 5))
-        _, predicted = torch.max(output.data, dim=1)
+        _, predicted = torch.max(outputs.data, dim=1)
         total += targets.size(0)
         correct += predicted.eq(targets.data).cpu().sum()
-        pred_labels += predicted.cpu().tolist()
         losses.update(loss.item(), inputs.size(0))
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -145,7 +143,7 @@ def main(args):
     best_acc = -1
     start = time.time()
 
-    train_loader, train_class_num, val_loader, val_class_num = get_dataloader(args)
+    train_loader, train_class_num, val_loader= get_dataloader(args)
     # iresnet model
     model = get_model(ROOT_DIR).to(args.device)
     # margin loss(arcface, cosface)
@@ -156,15 +154,17 @@ def main(args):
     criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smooth).to(args.device)
     optimizer, scheduler = get_optimizer_and_scheduler(model, fc_softmax, args, len(train_loader))
 
-    # if args.resume:
-    #     checkpoint = torch.load(os.path.join(ROOT_DIR,"weights/baseline-arcface.pth"), map_location=torch.device("cpu"))
-    #     model.load_state_dict(checkpoint)
+    if args.resume:
+        checkpoint = torch.load(os.path.join(ROOT_DIR,"weights/baseline-arcface.pth"))
+        model.load_state_dict(checkpoint)
+        checkpoint = torch.load(os.path.join(ROOT_DIR,"weights/baseline-finetune-fc_softmax.pth"))
+        fc_softmax.load_state_dict(checkpoint)
 
 
     printSave_start_condition(args)
     for epoch in range(1, args.epoch+1):
         train_acc, train_loss = train_one_epoch(train_loader, model, fc_softmax, criterion, optimizer, scheduler, epoch, args)
-        # val_acc, val_loss = validate(val_loader, model, criterion, epoch, args)
+        val_acc, val_loss = validate(val_loader, model, fc_softmax, criterion, epoch, args)
 
         # if best_acc < val_acc: <---------
         if best_acc < train_acc:
@@ -183,12 +183,12 @@ def main(args):
         print("-"*100)
             
         if args.wandb == True:
-            # wandb.log({'validation accuracy':val_acc, 'validation loss':val_loss, 'train loss':train_loss, 'train accuracy':train_acc})
-            wandb.log({'train loss':train_loss, 'train accuracy':train_acc})
-
+            wandb.log({'valid accuracy':val_acc, 'valid loss':val_loss, 'train loss':train_loss, 'train accuracy':train_acc})
+            # wandb.log({'train loss':train_loss, 'train accuracy':train_acc})
+        break
     total_time = time.time()-start
     total_time = time.strftime('%H:%M:%S', time.localtime(total_time))
-    print(f"finish training (total time: {total_time}")
+    print(f"finish training (total time: {total_time})")
 
 
 

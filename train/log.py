@@ -32,6 +32,7 @@ def printSave_start_condition(args):
     print("=> m3:\t'{}'".format(args.m3))
     print("=> batch size:\t'{}'".format(args.batch_size))
     print("=> epochs:\t'{}'".format(args.epoch))
+    print("=> eta_max:\t\t'{}'".format(args.eta_max))
     print("=> lr:\t\t'{}'".format(args.lr))
     print("=> optimizer:\t'{}'".format(args.optimizer))
     print("=> scheduler:\t'{}'".format(args.scheduler))

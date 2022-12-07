@@ -10,7 +10,7 @@ def get_args_parser():
     parser.add_argument('--lr', default=0.1, type=float, metavar='LR', help='initial learning rate')
     parser.add_argument('--epoch', default=100, type=int, metavar='N', help='number of total epochs to run')                    
     parser.add_argument('--wandb', type=bool, default=False, help='choose activating wandb')
-    parser.add_argument('--seed', type=str, default=41, help='set seed')
+    parser.add_argument('--seed', type=str, default=0, help='set seed')
     parser.add_argument('--expname', default=result_folder_name, type=str, help='name of experiment')
     parser.add_argument('-j', '--workers', default=4, type=int, metavar='W', help='number of data loading workers (default: 4)')
     parser.add_argument('--device', default="cuda:0", type=str)
@@ -18,6 +18,8 @@ def get_args_parser():
     parser.add_argument('--local_rank', type=int, default=0, help='select used GPU')
     parser.add_argument('--verbose', type=bool, default=False)
     parser.add_argument('--verbose_freq', type=int, default=1000)
+    parser.add_argument('--cutout_p', type=float, default=0.0)
+    parser.add_argument('--resume', type=bool, default=False)
 
     loss = parser.add_argument_group('loss')
     loss.add_argument('--label_smooth', type=float, default=0.0, help='optimizer name')

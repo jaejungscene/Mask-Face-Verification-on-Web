@@ -6,9 +6,11 @@ import numpy as np
 import queue as Queue
 import threading
 import torch
+import random
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
+from sklearn.model_selection import KFold
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -25,6 +27,18 @@ class Transforms:
         transforms.ToTensor(),
         transforms.Normalize(*normalize)
     ])
+
+
+
+def cutout_mask(inputs, p=0.5):
+    if p > random.random():
+        return inputs
+    size = inputs.size(-1)
+    y1 = 60
+    y2 = size
+    inputs[:,:,y1:y2,:] = 0.
+    return inputs
+
 
 class MXFaceDataset(Dataset):
     def __init__(self, path_imgrec, path_imgidx, local_rank, transform):
@@ -133,19 +147,38 @@ def get_dataloader(
         train_dataset = MXFaceDataset(
             path_imgrec=rec, 
             path_imgidx=idx,
-            local_rank=0, 
+            local_rank=args.local_rank,
             transform=Transforms.train
         )
     else:
         raise Exception(f"dosen exist {rec} file and {idx} file")
-    train_loader = CustomDataLoader(
-        local_rank=args.local_rank,
-        dataset=train_dataset,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        shuffle=True
-    )
+    # train_loader = CustomDataLoader(
+    #     local_rank=args.local_rank,
+    #     dataset=train_dataset,
+    #     batch_size=args.batch_size,
+    #     num_workers=args.workers,
+    #     shuffle=True
+    # )
 
+    skf = KFold(n_splits=200)
+    for train_idx, val_idx in skf.split(train_dataset):
+        train_sampler = torch.utils.data.SubsetRandomSampler(train_idx)
+        valid_sampler = torch.utils.data.SubsetRandomSampler(val_idx)
+        train_loader = CustomDataLoader(
+            sampler=train_sampler,
+            local_rank=args.local_rank,
+            dataset=train_dataset,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+        )
+        valid_loader = CustomDataLoader(
+            sampler=valid_sampler,
+            local_rank=args.local_rank,
+            dataset=train_dataset,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+        )
+        break
     # valid_class_num = 5749
     # valid_dir = os.path.join(root_dir,"lfw")
     # valid_dataset = ImageFolder(valid_dir, transform=Transforms.test)
@@ -155,9 +188,13 @@ def get_dataloader(
     #     shuffle=False,
     #     num_workers=args.workers
     # )
-    print(f"train dataset length:  {len(train_dataset):,}")
+    print(f'train dataset len: {train_idx.shape[0]:,}')
+    print(f'train dataloader len: {len(train_loader):,}')
+    print(f'valid dataset len: {val_idx.shape[0]:,}')
+    print(f'valid dataloader len: {len(valid_loader):,}')
+    # print(f"train dataset length:  {len(train_dataset):,}")
     # print(f"valid dataset length:  {len(valid_dataset):,}")
-    return train_loader, train_class_num, valid_loader, valid_class_num
+    return train_loader, train_class_num, valid_loader
 
 # def get_test__dataloader(
 #         batch_size,
