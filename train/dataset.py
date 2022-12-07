@@ -159,6 +159,13 @@ def get_dataloader(
     print(f"valid dataset length:  {len(valid_dataset):,}")
     return train_loader, train_class_num, valid_loader, valid_class_num
 
+def get_test__dataloader(
+        batch_size,
+        num_workers,
+        root_dir="/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/data/",
+    ):
+    
+
 
 
 
