@@ -1,12 +1,12 @@
 # Used Dataset
-- Training Dataset
+- Training & Validation Dataset
   - MS1MV2 (IDs: 85K, Total Images: 5.8M) => [download site](https://github.com/deepinsight/insightface/tree/master/recognition/_datasets_#ms1m-arcface-85k-ids58m-images-57)
 - Validation Dataset
-  - All of LFW (IDs: 5K, Total Images: 13K) => [download site](http://vis-www.cs.umass.edu/lfw/#download)
+  - 모든 LFW 이미지를 validation dataset으로 활용하려고 했으나 arcface, cosface margin loss를 활용한 모델 특정상 backbone과 fc-layer가 분리되어 있어 다른 fc-layer가 필요함으로 쓰지 못 함. 
 - Test Dataset (in order to find threshold for verification)
-  - LFW with more than one Image (IDs: 1.68K, Total Images: 9.16K)
+  - LFW with more than one Image (IDs: 1.68K, Total Images: 9.16K) => [download site](http://vis-www.cs.umass.edu/lfw/#download)
   - Face Mask Dataset Generated GAN (FMDG) in kaggle => [download site](https://www.kaggle.com/datasets/prasoonkottarathil/face-mask-lite-dataset)
-  - Natural Face Mask Dataset (NFMD) in kaggle => [download site](https://www.kaggle.com/datasets/ashishjangra27/face-mask-12k-images-dataset)
+  - Asian Face Mask Dataset (AFMD) in kaggle => [download site](http://vis-www.cs.umass.edu/lfw/#download)
 
 
 <br>
