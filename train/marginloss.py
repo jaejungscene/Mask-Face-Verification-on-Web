@@ -50,6 +50,7 @@ class CombinedMarginLoss(torch.nn.Module):
         target_logit = logits[index_positive, labels[index_positive].view(-1)]
 
         # m1 is flag for which margin loss will be activated
+        # arcface
         if self.m1 == 1.0 and self.m2 > 0.0:   # arcface margin
             sin_theta = torch.sqrt(1.0 - torch.pow(target_logit, 2))
             # add margin to cos_theta
@@ -63,11 +64,13 @@ class CombinedMarginLoss(torch.nn.Module):
             logits[index_positive, labels[index_positive].view(-1)] = final_target_logit
             logits = logits * self.s
         
+        # cosface
         elif self.m1 == 0.0 and self.m3 > 0.0: # cosface margin
             final_target_logit = target_logit - self.m3
             logits[index_positive, labels[index_positive].view(-1)] = final_target_logit
             logits = logits * self.s
         
+        # arcface + cosface
         elif self.m1 == 0.5 and self.m2 > 0.0 and self.m3 > 0.0:
             sin_theta = torch.sqrt(1.0 - torch.pow(target_logit, 2))
             cos_theta_m = target_logit * self.cos_m - sin_theta * self.sin_m  # cos(target_theta+margin)

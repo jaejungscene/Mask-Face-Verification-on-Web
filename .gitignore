@@ -4,9 +4,12 @@ __pycache__/
 .venv
 test*.ipynb
 temp
-*.pth
+
+# train
 train/data
 train/log
-weights
-wandb
+train/weights
+train/wandb
+train/temp
+
 ./react-app/node_modules
