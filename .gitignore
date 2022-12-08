@@ -2,7 +2,9 @@
 .idea
 __pycache__/
 .venv
-test*.ipynb
+test-kong.ipynb
+test-jaejung.ipynb
+test.ipynb
 temp
 
 # train
