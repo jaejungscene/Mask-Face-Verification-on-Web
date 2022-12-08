@@ -10,3 +10,5 @@ train/log
 weights
 wandb
 ./react-app/node_modules
+./node_modules
+node_modules

@@ -40,7 +40,7 @@
 }
 
 .inputbox {
-  width: 120%;
+  width: 130%;
   box-sizing: border-box;
   margin-bottom: 10px;
   font-size: 13px;
@@ -55,7 +55,7 @@
 }
 
 .main-btn {
-  width: 120%;
+  width: 130%;
   height: 45px;
   display: inline-block;
   color: #fff;

@@ -2,8 +2,6 @@ import "./CSS/styles.css";
 import React from "react";
 import { db } from "./firebase";
 import styled from "styled-components";
-import { useRecoileState, useSetRecoilState, useResetRecoilState } from "recoil";
-import { usersAtom } from "./atom";
 import { useState, useEffect } from "react";
 import { async } from "@firebase/util";
 import { collection, getDocs, addDoc } from "firebase/firestore";
@@ -12,6 +10,7 @@ import bg from "./image/bg.jpg";
 function App() {
   const [newUID, setNewUID] = useState("");
   const [newPass, setNewPass] = useState(0);
+  const [tempPW, setTempPW] = useState([]);
 
   const [users, setUsers] = useState([]);
   const usersCollectionRef = collection(db, "users");
@@ -37,8 +36,11 @@ function App() {
     // await addDoc(usersCollectionRef, { password: newPass });
     console.log("verifyPW");
     console.log("Userlen :", users.length);
+    // setTempPW([]);
+    // setTempPW(tempPW.push(Object.keys(users[0].password)));
+    console.log(users[0].password);
     var temp = users[0].password;
-    console.log("Password len", Object.keys(temp).length);
+    console.log("Password len", temp.length);
   };
 
   useEffect(() => {
@@ -52,7 +54,7 @@ function App() {
   }, []);
 
   return (
-    <Container>
+    <div className="container">
       <div className="content">
         <div className="box-s">
           <div className="bg-L"></div>
@@ -64,9 +66,11 @@ function App() {
                   className="inputbox"
                   type="text"
                   placeholder="사용자 ID를 입력해주세요."
-                  // onChange={(e) => {
-                  //   setNewUID(e.target.value);
-                  // }}
+                  required
+                  value={newUID}
+                  onChange={(e) => {
+                    setNewUID(e.target.value);
+                  }}
                 />
                 {/* 이 부분의 버튼을 누르면 FaceID인증page 이동 */}
                 <button className="main-btn" onClick={createUser}>
@@ -101,7 +105,7 @@ function App() {
           </div>
         </div>
       </div>
-    </Container>
+    </div>
   );
 }
 
