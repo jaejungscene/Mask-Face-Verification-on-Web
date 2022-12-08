@@ -1,11 +1,1 @@
-# python test.py --lr 1e-5 --eta_max 1e-4 --batch_size 64 --wandb 0 --device cuda:3 --verbose True
-# arcface
-python train.py --m1 1.0 --m2 0.5 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 6 --weight_decay 5e-4 --wandb 0 --device cuda:3 --verbose True
-
-# cosface
-# python train.py --m1 0.0 --m3 0.35 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 256 --epoch 20 --weight_decay 5e-4 --wandb 1 --device cuda:3 --verbose True
-
-# arcface + cosface
-# python train.py --m1 0.5 --m2 0.5 --m3 0.35 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 256 --epoch 20 --weight_decay 5e-4 --wandb 1 --device cuda:3 --verbose True
-
-python test.py --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 128 --weight_decay 5e-4 --device cuda:5 --verbose True
+python test.py --m1 0.0 --m3 0.35 --optimizer sgd --eta_max 5e-2 --lr 5e-6 --batch_size 128 --epoch 20 --weight_decay 5e-4 --device cuda:8 --cutout_p 0.5 --verbose True

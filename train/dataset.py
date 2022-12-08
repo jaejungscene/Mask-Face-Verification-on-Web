@@ -6,9 +6,11 @@ import numpy as np
 import queue as Queue
 import threading
 import torch
+import random
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets import ImageFolder
+from sklearn.model_selection import KFold
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -25,6 +27,18 @@ class Transforms:
         transforms.ToTensor(),
         transforms.Normalize(*normalize)
     ])
+
+
+
+def cutout_mask(inputs, p=0.5):
+    if p > random.random():
+        return inputs
+    size = inputs.size(-1)
+    y1 = 60
+    y2 = size
+    inputs[:,:,y1:y2,:] = 0.
+    return inputs
+
 
 class MXFaceDataset(Dataset):
     def __init__(self, path_imgrec, path_imgidx, local_rank, transform):
@@ -133,114 +147,57 @@ def get_dataloader(
         train_dataset = MXFaceDataset(
             path_imgrec=rec, 
             path_imgidx=idx,
-            local_rank=0, 
+            local_rank=args.local_rank,
             transform=Transforms.train
         )
     else:
         raise Exception(f"dosen exist {rec} file and {idx} file")
-    train_loader = CustomDataLoader(
-        local_rank=args.local_rank,
-        dataset=train_dataset,
-        batch_size=args.batch_size,
-        num_workers=args.workers,
-        shuffle=True
-    )
+    # train_loader = CustomDataLoader(
+    #     local_rank=args.local_rank,
+    #     dataset=train_dataset,
+    #     batch_size=args.batch_size,
+    #     num_workers=args.workers,
+    #     shuffle=True
+    # )
 
-    valid_class_num = 5749
-    valid_dir = os.path.join(root_dir,"lfw")
-    valid_dataset = ImageFolder(valid_dir, transform=Transforms.test)
-    valid_loader = DataLoader(
-        dataset=valid_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.workers
-    )
-    print(f"train dataset length:  {len(train_dataset):,}")
-    print(f"valid dataset length:  {len(valid_dataset):,}")
-    return train_loader, train_class_num, valid_loader, valid_class_num
+    skf = KFold(n_splits=200)
+    for train_idx, val_idx in skf.split(train_dataset):
+        train_sampler = torch.utils.data.SubsetRandomSampler(train_idx)
+        valid_sampler = torch.utils.data.SubsetRandomSampler(val_idx)
+        train_loader = CustomDataLoader(
+            sampler=train_sampler,
+            local_rank=args.local_rank,
+            dataset=train_dataset,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+        )
+        valid_loader = CustomDataLoader(
+            sampler=valid_sampler,
+            local_rank=args.local_rank,
+            dataset=train_dataset,
+            batch_size=args.batch_size,
+            num_workers=args.workers,
+        )
+        break
+    # valid_class_num = 5749
+    # valid_dir = os.path.join(root_dir,"lfw")
+    # valid_dataset = ImageFolder(valid_dir, transform=Transforms.test)
+    # valid_loader = DataLoader(
+    #     dataset=valid_dataset,
+    #     batch_size=args.batch_size,
+    #     shuffle=False,
+    #     num_workers=args.workers
+    # )
+    print(f'train dataset len: {train_idx.shape[0]:,}')
+    print(f'train dataloader len: {len(train_loader):,}')
+    print(f'valid dataset len: {val_idx.shape[0]:,}')
+    print(f'valid dataloader len: {len(valid_loader):,}')
+    # print(f"train dataset length:  {len(train_dataset):,}")
+    # print(f"valid dataset length:  {len(valid_dataset):,}")
+    return train_loader, train_class_num, valid_loader
 
-def get_test__dataloader(
-        batch_size,
-        num_workers,
-        root_dir="/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/data/",
-    ):
-    
-
-
-
-
-# class CustomDataset(Dataset):
-#     def __init__(self, df, transform=None):
-#         self.df = df
-#         self.transform = transform
-    
-#     def __len__(self):
-#         return self.df.shape[0]
-
-#     def __getitem__(self, index):
-#         img_path = self.df["image_path"].iloc[index]
-#         if self.transform:
-#             image = self.transform(Image.open(img_path))
-#         else:
-#             image = io.imread(img_path) # numpy array로 읽어옴
-#         label = self.df["label"].iloc[index]
-#         return [image, label]
-
-
-# class TestDataset(Dataset):
-#     def __init__(self, transform=None):
-#         self.transform = transform
-#         self.dir = "/home/ljj0512/private/workspace/CP_urban-datathon_CT/test"
-    
-#     def __len__(self):
-#         return len(os.listdir(self.dir))
-
-#     def __getitem__(self, index):
-#         img_path = os.listdir(self.dir)[index]
-#         image = self.transform(Image.open(os.path.join(self.dir,img_path)))
-#         return image
-
-
-
-# def create_dataloader(args):
-#     train_df = pd.read_csv("train_df.csv")
-#     val_df = pd.read_csv("val_df.csv")
-#     train_dataset = CustomDataset(train_df, transform=get_transform.train)
-#     val_set = CustomDataset(val_df, transform=get_transform.val)
-#     test_set = TestDataset(transform=get_transform.test)
-#     # train_dataset = ImageFolder(root = DATA_DIR+"/Train",
-#     #                     transform = get_transform("train"))
-
-#     # val_set = ImageFolder(root = DATA_DIR+"/Validation",
-#     #                         transform = get_transform("valid"))
-#     train_loader = DataLoader(dataset=train_dataset,
-#                                 batch_size=args.batch_size,
-#                                 shuffle=True,
-#                                 num_workers=4)
-#     val_loader = DataLoader(dataset=val_set,
-#                             batch_size=args.batch_size,
-#                             shuffle=False,
-#                             num_workers=4)
-#     test_loader = DataLoader(dataset=test_set,
-#                             batch_size=args.batch_size,
-#                             shuffle=False,
-#                             num_workers=4)
-    
-#     return train_loader, val_loader,  test_loader, 5
-
-
-# def get_transform(param):
-# class get_transform:
-#     train = transforms.Compose([
-#                 transforms.RandomHorizontalFlip(),
-#                 transforms.RandomVerticalFlip(),
-#                 transforms.RandomAdjustSharpness(sharpness_factor=2),
-#                 transforms.ToTensor(),
-#             ])
-#     val = transforms.Compose([
-#                 transforms.ToTensor(),
-#             ])
-#     test = transforms.Compose([
-#                 transforms.ToTensor(),
-#             ])
-    
+# def get_test__dataloader(
+#         batch_size,
+#         num_workers,
+#         root_dir="/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/data/",
+#     ):

@@ -27,7 +27,7 @@ class face_vectorization:
 
     def landmarksDetection(self, img, face_landmarks, draw=False):
         img_height, img_width = img.shape[:2]
-        # list[(x,y), (x,y)....]
+        
         mesh_coord = [[int(point.x * img_width), int(point.y * img_height)] for point in
                       face_landmarks.landmark]
         if draw:
@@ -42,6 +42,8 @@ class face_vectorization:
         x2, y2 = np.amax(crop_points, axis=0)
         cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
 
+        #w = (x2 - x1) * 1.2
+        #h = w * IMG_SIZE[1] / IMG_SIZE[0]
         w = (x2 - x1) * 1.2
         h = w * IMG_SIZE[1] / IMG_SIZE[0]
 
@@ -89,10 +91,12 @@ class face_vectorization:
         print("output shape: ", output.shape)
 
         np.save(os.path.join(self.base_dir, path), output.numpy())
+        return output
 
     def capturing(self):
         # 웹캠으로 테스트
         video = cv2.VideoCapture(0)
+        emb = None
 
         with self.mp_face_mesh.FaceMesh(
                 static_image_mode=False,
@@ -128,13 +132,16 @@ class face_vectorization:
 
                 # 'q'버튼 누르면 npy 저장 후 종료하기
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    self.save_img(squeezed_face, "images/10.npy", self.model)
+                    emb = self.save_img(squeezed_face, "images/11.npy", self.model)
                     #print(type(squeezed_face), type(frame))
                     break
 
             video.release()
             cv2.destroyAllWindows()
 
+        return emb
+
 if __name__ == "__main__":
     model = face_vectorization()
-    model.capturing()
+    emb = model.capturing()
+    print(emb)

@@ -26,7 +26,8 @@ class face_verifier:
     def __init__(self):
         self.num_of_frames = {"Mask": 0, "No Mask": 0}
         self.matched = 0
-        self.threshold = 0.5
+        self.threshold = 0.85
+        self.threshold_on_mask = 0.35
         self.loop_count = 0
         # mediapipe configs
         self.mp_face_mesh = mp.solutions.face_mesh
@@ -66,10 +67,10 @@ class face_verifier:
     def load_img(self):
         print("-"*50)
         print("loading image")
-        np_img = np.load(os.path.join(base_dir, "images/9.npy")) #(1, 512)
-        print("np_img shape: ", np_img)
+        np_emb = np.load(os.path.join(base_dir, "images/11.npy")) #(1, 512)
+        print("np_img len: ", len(np_emb))
 
-        return np_img
+        return np_emb
 
     # 이미지로 테스트
     """
@@ -117,10 +118,10 @@ class face_verifier:
         ])
 
         torch_img = image_transforms(face_2)
-        print("torch img size: ", torch_img.size())
+        #print("torch img size: ", torch_img.size())
         C, H, W = torch_img.size()
         torch_img = torch_img.view(1, C, H, W)
-        print('input shape', torch_img.shape)
+        #print('input shape', torch_img.shape)
 
         return prediction, torch_img
 
@@ -159,10 +160,10 @@ class face_verifier:
 
                 # Face_Landmark Crop
                 mesh_coords = self.landmarksDetection(cropped_image, face_landmarks, False)
-                left_eye_points = np.array([mesh_coords[p] for p in LEFT_EYE], dtype=np.int32)
-                right_eye_points = np.array([mesh_coords[p] for p in RIGHT_EYE], dtype=np.int32)
-                nose_points = np.array([mesh_coords[p] for p in NOSE], dtype=np.int32)
-                lip_points = np.array([mesh_coords[p] for p in LIP], dtype=np.int32)
+                #left_eye_points = np.array([mesh_coords[p] for p in LEFT_EYE], dtype=np.int32)
+                #right_eye_points = np.array([mesh_coords[p] for p in RIGHT_EYE], dtype=np.int32)
+                #nose_points = np.array([mesh_coords[p] for p in NOSE], dtype=np.int32)
+                #lip_points = np.array([mesh_coords[p] for p in LIP], dtype=np.int32)
 
                 whole_face, whole_face_rect = self.crop(frame, mesh_coords)
                 #frame = cv2.flip(frame, 1)
@@ -193,12 +194,13 @@ class face_verifier:
                 if self.num_of_frames["No Mask"] >= 8:
                     #print("embedding: ", len(embedding)) #512
                     if self.loop_count == 0:
+                        print("마스크 미착용")
                         print("Comparing Emb Vector")
 
                     if self.loop_count % 5 == 0:
                         with torch.no_grad():
                             embedding = iresnet(torch_face).squeeze()
-                        result = self.cos_sim(embedding, loaded_image)
+                            result = self.cos_sim(embedding, loaded_image)
 
                         print("result", result)
                         if result > self.threshold:
@@ -211,6 +213,7 @@ class face_verifier:
                     self.loop_count += 1
 
                 elif self.num_of_frames["Mask"] >= 8:
+                    """
                     left_eye, left_eye_rect = self.crop(cropped_image, left_eye_points)
                     right_eye, right_eye_rect = self.crop(cropped_image, right_eye_points)
                     nose, nose_rect = self.crop(cropped_image, nose_points)
@@ -226,16 +229,35 @@ class face_verifier:
                     cv2.rectangle(cropped_image, pt1=tuple(lip_rect[0:2]), pt2=tuple(lip_rect[2:4]), color=(255, 255, 255),
                                   thickness=2)
                     #cv2.imshow('cropped_image', cropped_image)
+                    """
+                    if self.loop_count == 0:
+                        print("마스크 착용")
+                        print("Comparing Emb Vector")
+
+                    if self.loop_count % 5 == 0:
+                        with torch.no_grad():
+                            embedding = iresnet(torch_face).squeeze()
+                            result = self.cos_sim(embedding, loaded_image.reshape(512,))
+
+                        print("result", result)
+                        if result > self.threshold_on_mask:
+                            self.matched += 1
+
+                    if self.matched > 4:
+                        print("+++++ Matching Success +++++")
+                        break  # 5프레임 이상 같은 사람으로 인식되면 종료
+
+                    self.loop_count += 1
 
 
                 # 화면에 띄우기
                 cv2.imshow('frame', frame)
-                print(cropped_image.shape, torch_face.shape)
+                #print(cropped_image.shape, torch_face.shape)
                 # 전처리된 이미지 보려면 주석 해제
                 #squeezed_face = face.squeeze() # 전처리된 얼굴 이미지
                 #cv2.imshow('preprocessed_face', squeezed_face)
 
-                print(self.num_of_frames)
+                #print("#frames : ", self.num_of_frames)
 
                 # 'q'버튼 누르면 종료하기
                 if cv2.waitKey(1) & 0xFF == ord('q'): break
