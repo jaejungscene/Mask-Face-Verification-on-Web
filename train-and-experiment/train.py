@@ -24,7 +24,7 @@ from dataset import get_dataloader, cutout_mask
 from model import get_model
 import warnings
 warnings.filterwarnings("ignore")
-ROOT_DIR = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train"
+ROOT_DIR = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train-and-experiment"
 result_folder_name = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 def seed_everything(seed):
     random.seed(seed)

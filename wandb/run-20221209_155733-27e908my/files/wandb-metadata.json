@@ -1,0 +1,24 @@
+{
+    "os": "Linux-4.15.0-197-generic-x86_64-with-glibc2.17",
+    "python": "3.8.13",
+    "heartbeatAt": "2022-12-09T06:57:35.365387",
+    "startedAt": "2022-12-09T06:57:33.584225",
+    "docker": null,
+    "gpu": "NVIDIA GeForce RTX 3090",
+    "gpu_count": 10,
+    "cpu_count": 104,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train-and-experiment/search-threshold.py",
+    "codePath": "train-and-experiment/search-threshold.py",
+    "git": {
+        "remote": "https://github.com/jaejungscene/Computer-Vision-Project.git",
+        "commit": "c1cf6c66088a79c5ff5798ff2ce9859ecc020017"
+    },
+    "email": "ljj0512@gmail.com",
+    "root": "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project",
+    "host": "ljjDock",
+    "username": "ljj0512",
+    "executable": "/home/ljj0512/.conda/envs/torch/bin/python"
+}

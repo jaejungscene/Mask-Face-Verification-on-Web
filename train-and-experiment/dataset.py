@@ -31,7 +31,7 @@ class Transforms:
 
 
 def cutout_mask(inputs, p=0.5):
-    if p > random.random():
+    if p < random.random():
         return inputs
     size = inputs.size(-1)
     y1 = 60
