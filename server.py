@@ -1,30 +1,35 @@
 from flask import Flask, render_template, jsonify, request
-# from register import face_vectorization
-# from identifier import face_verifier
+from register import face_vectorization
+from identifier import face_verifier
 import json
 
 app = Flask(__name__)
 
 
-@app.route('/register', methods=['GET'])
-def register_face():
+@app.route('/register/<newID>', methods=['GET']) # param: UID
+def register_face(newID):
     print("==== operating register.py ====")
-    # model = face_vectorization()
-    # model.capturing()
+    uid = newID
+    print("user ID : ", newID)
+    model = face_vectorization()
+    model.capturing()
+    emb = [1,]
     print("==== register fininshed ====")
     return jsonify({
-        'result': "done"
+        'result': '1',
     })
 
 
-@app.route('/verify', methods=['GET'])
-def register_faces():
+@app.route('/verify', methods=['GET'])  # param: UID, emb
+def register_face():
     print("==== operating register.py ====")
-    # model = face_verifier()
-    # model.capturing()
+    model = face_verifier()
+    model.capturing()
+    emb = [1,]
     print("==== register fininshed ====")
     return jsonify({
-        'result': "done"
+        'result': 1, # 성공시
+        'emb' : emb,
     })
 
 

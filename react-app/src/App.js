@@ -1,19 +1,12 @@
 import "./CSS/styles.css";
 import React from "react";
-import { db } from "./firebase";
 import styled from "styled-components";
 import { useState, useEffect } from "react";
-import { async } from "@firebase/util";
-import { collection, getDocs, addDoc } from "firebase/firestore";
 import bg from "./image/bg.jpg";
 
 function App() {
   const [newUID, setNewUID] = useState("");
-  const [newPass, setNewPass] = useState(0);
-  const [tempPW, setTempPW] = useState([]);
-
   const [users, setUsers] = useState([]);
-  const usersCollectionRef = collection(db, "users");
 
   const Container = styled.div`
     display: flex;
@@ -27,31 +20,25 @@ function App() {
     justify-content: center;
   `;
 
-  const createUser = async () => {
-    await addDoc(usersCollectionRef, { UID: newUID });
-    console.log("Creat new ID :", newUID);
+  const isFaceID = (e) => {
+    e.preventDefault();
+    console.log(newUID);
+    fetch(`http://localhost:5000/${newUID}`)
+      .then((res) => res.json())
+      .then((res) => {
+        console.log(res);
+        if (res.result === "1") {
+          alert("인증되었습니다.");
+        } else {
+          alert("인증에 실패하였습니다.");
+        }
+      })
+      .catch((err) => console.log(err));
   };
 
-  const verifyPW = async () => {
-    // await addDoc(usersCollectionRef, { password: newPass });
-    console.log("verifyPW");
-    console.log("Userlen :", users.length);
-    // setTempPW([]);
-    // setTempPW(tempPW.push(Object.keys(users[0].password)));
-    console.log(users[0].password);
-    var temp = users[0].password;
-    console.log("Password len", temp.length);
+  const inLogin = (e) => {
+    e.preventDefault();
   };
-
-  useEffect(() => {
-    const getUsers = async () => {
-      const usersCollection = await getDocs(usersCollectionRef);
-      setUsers(usersCollection.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
-      console.log(usersCollection);
-    };
-
-    getUsers();
-  }, []);
 
   return (
     <div className="container">
@@ -70,10 +57,11 @@ function App() {
                   value={newUID}
                   onChange={(e) => {
                     setNewUID(e.target.value);
+                    console.log(newUID);
                   }}
                 />
                 {/* 이 부분의 버튼을 누르면 FaceID인증page 이동 */}
-                <button className="main-btn" onClick={createUser}>
+                <button className="main-btn" onClick={isFaceID}>
                   FACE ID
                 </button>
               </div>
@@ -87,19 +75,9 @@ function App() {
                   }}
                 />
                 {/* 위 FaceID를 통해 인증이 되면 자동적으로 password가 입력되며 Login btn을 클릭해 로그인 성공 */}
-                <button className="main-btn" onClick={verifyPW}>
+                <button className="main-btn" onClick={inLogin}>
                   LOGIN
                 </button>
-                {users.map((user) => {
-                  return (
-                    <div>
-                      <h1>UID : {user.UID}</h1>
-                      {/* <h1>
-              Password : {user.password["1"]}, {user.password["2"]}
-            </h1> */}
-                    </div>
-                  );
-                })}
               </div>
             </div>
           </div>
