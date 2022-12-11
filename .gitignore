@@ -7,12 +7,12 @@ test-jaejung.ipynb
 test.ipynb
 temp
 
-# train
-train/data
-train/log
-train/weights
-train/wandb
-train/temp
+# train-and-experiment
+train-and-experiment/data
+train-and-experiment/log
+train-and-experiment/weights
+train-and-experiment/wandb
+train-and-experiment/temp
 
 ./react-app/node_modules
 ./node_modules

@@ -27,11 +27,22 @@ class Transforms:
         transforms.ToTensor(),
         transforms.Normalize(*normalize)
     ])
+    testlfw = transforms.Compose([
+        transforms.CenterCrop(112),
+        transforms.ToTensor(),
+        transforms.Normalize(*normalize)
+    ])
+    testfmdg = transforms.Compose([
+        transforms.Resize((224,224)),
+        transforms.CenterCrop(112),
+        transforms.ToTensor(),
+        transforms.Normalize(*normalize)
+    ])
 
 
 
 def cutout_mask(inputs, p=0.5):
-    if p > random.random():
+    if p < random.random():
         return inputs
     size = inputs.size(-1)
     y1 = 60

@@ -5,6 +5,7 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from model import get_model
+from dataset import cutout_mask
 import random
 import wandb
 
@@ -14,7 +15,7 @@ def cos_sim(x:torch.tensor, y:torch.tensor)->torch.tensor:
     return x.view(-1).dot(y.view(-1)) / (torch.norm(x)*torch.norm(y))
 
 
-DATA_DIR = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/data/lfw"
+DATA_DIR = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train-and-experiment/data/lfw"
 
 
 file_list = glob.glob(os.path.join(DATA_DIR,"*"))
@@ -72,13 +73,16 @@ class LFWMatchDataset(Dataset):
         return {"images":images, "label":torch.tensor(index)}
 
 test_set =  LFWMatchDataset(data_path_list,Transforms.test_lfw)
-data_dir = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/"
+data_dir = "/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train-and-experiment/"
 model = get_model(base_dir=data_dir)
 
 ids = len(test_set)
 device = "cuda:1"
 model = model.to(device)
 model.eval()
+print(ids)
+
+cutout = True
 
 TP = 0
 FP = 0
@@ -87,8 +91,8 @@ FN = 0
 
 wandb.init(project='mask_face_verification', entity='jaejungscene')
 
-sim_threshold = 0.25
-max_threshold = 0.38
+sim_threshold = 0.33
+max_threshold = 0.42
 increase = 0.01
 with torch.no_grad():
     while sim_threshold <= max_threshold:
@@ -105,7 +109,10 @@ with torch.no_grad():
             same_vec_list = []
             for img in images:
                 img, label = img.to(device), label.to(device)
-                img = img.unsqueeze(0)
+                if cutout:
+                    img = cutout_mask(img.unsqueeze(0))
+                else:
+                    img = img.unsqueeze(0)
                 embed_vec = model(img)
                 same_vec_list.append(embed_vec)
 
@@ -116,7 +123,10 @@ with torch.no_grad():
                 while randidx == i:
                     randidx = random.randint(0,ids-1)
                 n = random.randint(0,len(test_set[randidx]["images"])-1)
-                img = test_set[randidx]["images"][n].unsqueeze(0).to(device)
+                if cutout:
+                    img = cutout_mask(test_set[randidx]["images"][n].unsqueeze(0)).to(device)
+                else:
+                    img = test_set[randidx]["images"][n].unsqueeze(0).to(device)
                 embed_vec = model(img)
                 diff_vec_list.append(embed_vec)
             
@@ -141,7 +151,7 @@ with torch.no_grad():
             if i%100 == 0:
                 print(f"{i}\t| {TP}\t {TN}\t {FN}\t {FP}\t | {TAR:0.4}% @ {FAR:0.4}%")
         print(f"Last\t| {TP}\t {TN}\t {FN}\t {FP}\t | {TAR:0.4}% @ {FAR:0.4}%")
-        with open("/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train/search-threshold.txt", "a") as f:
+        with open("/home/ljj0512/private/workspace/CV-project/Computer-Vision-Project/train-and-experiment/search-threshold.txt", "a") as f:
             f.write(f"threshold: {sim_threshold}, {TAR:0.4}% @ {FAR:0.4}%\n")
         print()
         sim_threshold += increase
