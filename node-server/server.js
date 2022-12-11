@@ -9,20 +9,16 @@ const PORT = 4004 || process.env.PORT;
 const app = express();
 const logger = morgan("dev");
 const usersCollectionRef = collection(db, "users");
+const path = require('path');
+const axios = require("axios");
 
 app.set("view engine", "html");
 // app.set("views", process.cwd() + "/src/views");
 app.use(express.json());
 app.use(cors());
 app.use(logger);
+app.use('/', express.static(path.join(__dirname, 'views')));
 
-app.get("/", async (req, res) => {
-  const snapshot = await getDocs(usersCollectionRef);
-  const ids = snapshot.docs.map((doc) => doc.id); // id traceback
-  console.log(ids);
-  const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); // data traceback
-  res.send(list);
-});
 
 //Create new user POST msg
 app.post("/create", async (req, res) => {
@@ -34,6 +30,7 @@ app.post("/create", async (req, res) => {
     });
   } else {
     console.log("Data of users:", data);
+    const user = getDoc
     await addDoc(usersCollectionRef, { UID: data.UID, password: data.password, faceid: data.faceid });
     res.send("Creat new ID :" + data.UID);
 
@@ -113,38 +110,50 @@ app.post("/signup", async (req, res) => {
 //얼굴 등록 POST : /faceid
 //UID(string)와 faceid(숫자) request를 보내면, firebase에 저장되고, 그 UID를 가진 사용자의 정보를 출력
 //숫자가 입력되면 기존 faceid list에 추가로 저장됨.
-app.post("/faceid", async (req, res) => {
+app.post("/faceid", async (req, res, next) => {
   const data = req.body;
+  console.log(data.UID, data.password);
   const snapshot = await getDocs(usersCollectionRef);
   const uidList = snapshot.docs.map((doc) => doc.data().UID); // UID traceback
-  var faceidList = [];
-  snapshot.docs.map((doc) => {
-    if (doc.data().UID == data.UID) {
-      if (doc.data().faceid) {
-        faceidList = doc.data().faceid;
-      } else {
-        faceidList = [];
-      }
-    }
-  }); // faceid traceback
-
-  if (!uidList.includes(data.UID)) {
+  var matched = false;
+  if (uidList.includes(data.UID)) {
+    snapshot.docs.map((doc) => {
+      if (doc.data().UID === data.UID && doc.data().password === data.password) {
+        if (doc.data().password === data.password) { 
+          matched = true;
+        }
+      } 
+    });
+  } else {
     return res.status(400).json({
       status: "error",
       error: "회원가입을 먼저 해주세요.",
-    });
+    }); // UID가 없을 때
+  }
+  if (matched) {
+    try{
+      const response = await axios.get(`http://127.0.0.1:5000/register/${data.UID}`);
+      console.log(response.data.result);
+      if (response.data.result == '1') {
+        return res.status(200).json({
+          status: "success",
+          message: "Face ID를 성공적으로 등록했습니다."
+        })
+      } else {
+        return res.status(400).json({
+          status: "error",
+          error: "Face ID 등록에 실패했습니다."
+        })
+      }
+    }
+    catch(error) {
+      console.log(err);
+      next(error)
+    }
   } else {
-    const docRef = doc(db, "users", data.UID);
-    faceidList.push(data.faceid);
-    console.log(faceidList);
-    await updateDoc(docRef, { faceid: faceidList });
-    console.log(data.UID, data.faceid);
-    const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); // data traceback
-
-    return res.status(200).json({
-      status: "success",
-      data: data,
-      list: list,
+    return res.status(400).json({
+      status: "error",
+      error: "회원 정보가 일치하지 않습니다.",
     });
   }
 });
@@ -156,38 +165,45 @@ app.post("/faceauth", async (req, res) => {
   const data = req.body;
   const snapshot = await getDocs(usersCollectionRef);
   const uidList = snapshot.docs.map((doc) => doc.data().UID); // UID traceback
-  var faceidList = [];
+  var flag = false;
   if (uidList.includes(data.UID)) {
-    snapshot.docs.map((doc) => {
-      if (doc.data().UID === data.UID) {
-        faceidList = doc.data().faceid; // UID가 갖고있는 embbeding faceid list
-        /* Flask에 faceidList 넘겨줘야함 */
-        /*여기서 특정 threshold를 넘는지, 즉 faceid로 로그인이 성공하는지 boolean값 반환*/
+    const userID = data.UID;
+    try {
+      const response = await axios.get(`http://127.0.0.1:5000/verify/${userID}`)
+      console.log(response.data);
+      if (response.data.result === '2') {
+        return res.status(401).json({
+          status: "error",
+          error: "Face ID를 먼저 등록해주세요."
+        })
+      } else if (response.data.result ==='1') {
         flag = true;
-        if (flag) {
-          return res.status(200).json({
-            status: "success",
-            data: data,
-          });
-        } else {
-          return res.status(400).json({
-            status: "error",
-            error: "faceid가 일치하지 않습니다.",
-          });
-        }
       }
-    }); // faceid traceback;
-  } else {
-    return res.status(400).json({
-      status: "error",
-      error: "회원가입을 먼저 해주세요.",
-    });
+
+      if (flag) {
+        return res.status(200).json({
+          status: "success",
+          data: data,
+        });
+      } else {
+        return res.status(401).json({
+          status: "error",
+          error: "Face ID가 일치하지 않습니다.",
+        });
+      }
+    } catch (err) {
+      console.log(err);
+    }
   }
+  return res.status(400).json({
+    status: "error",
+    error: "회원가입을 먼저 해주세요.",
+  });
 });
 
 //로그인 POST msg : /login
 //UID와 password가 일치하면 200, 일치하지 않으면 400
-app.post("/login", async (req, res) => {
+app.post("/login", async (req, res, next) => {
   const data = req.body;
   const snapshot = await getDocs(usersCollectionRef);
   const uidList = snapshot.docs.map((doc) => doc.data().UID); // UID traceback
@@ -195,10 +211,11 @@ app.post("/login", async (req, res) => {
     snapshot.docs.map((doc) => {
       if (doc.data().UID === data.UID) {
         if (doc.data().password === data.password) {
+          console.log("login success");
           return res.status(200).json({
             status: "success",
-            data: data,
-          });
+            data: data
+          })
         } else {
           return res.status(400).json({
             status: "error",
@@ -213,6 +230,14 @@ app.post("/login", async (req, res) => {
       error: "회원가입을 먼저 해주세요.",
     }); // UID가 없을 때
   }
+});
+
+app.get("/", async (req, res) => {
+  const snapshot = await getDocs(usersCollectionRef);
+  const ids = snapshot.docs.map((doc) => doc.id); // id traceback
+  console.log(ids);
+  const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })); // data traceback
+  res.sendFile(path.join(__dirname, '../react-app/build/index.html'))
 });
 
 const handleListening = () => console.log(`server listening on port http://localhost:${PORT} 💥`);

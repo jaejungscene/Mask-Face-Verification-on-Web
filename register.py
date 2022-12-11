@@ -93,7 +93,7 @@ class face_vectorization:
         np.save(os.path.join(self.base_dir, path), output.numpy())
         return output
 
-    def capturing(self):
+    def capturing(self, userId):
         # 웹캠으로 테스트
         video = cv2.VideoCapture(0)
         emb = None
@@ -132,7 +132,7 @@ class face_vectorization:
 
                 # 'q'버튼 누르면 npy 저장 후 종료하기
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-                    emb = self.save_img(squeezed_face, "images/11.npy", self.model)
+                    emb = self.save_img(squeezed_face, "images/"+str(userId)+".npy", self.model)
                     #print(type(squeezed_face), type(frame))
                     break
 

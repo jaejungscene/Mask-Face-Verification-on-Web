@@ -26,7 +26,7 @@ class face_verifier:
     def __init__(self):
         self.num_of_frames = {"Mask": 0, "No Mask": 0}
         self.matched = 0
-        self.threshold = 0.85
+        self.threshold = 0.82
         self.threshold_on_mask = 0.35
         self.loop_count = 0
         # mediapipe configs
@@ -64,10 +64,10 @@ class face_verifier:
         img = img[rect[1]:rect[3], rect[0]:rect[2]]
         return img, rect
 
-    def load_img(self):
+    def load_img(self, userId):
         print("-"*50)
         print("loading image")
-        np_emb = np.load(os.path.join(base_dir, "images/11.npy")) #(1, 512)
+        np_emb = np.load(os.path.join(base_dir, "images/"+userId+".npy")) #(1, 512)
         print("np_img len: ", len(np_emb))
 
         return np_emb
@@ -128,14 +128,14 @@ class face_verifier:
     def cos_sim(self, x:torch.tensor, y:torch.tensor)->torch.tensor:
         return x.view(-1).dot(y.view(-1)) / (torch.norm(x)*torch.norm(y))
 
-    def capturing(self):
+    def capturing(self, userID):
         # 모델 불러오기
         maskNet = load_model(self.args["model"])
 
         # 웹캠으로 테스트
         video = cv2.VideoCapture(0)
 
-        loaded_image = torch.Tensor(self.load_img())
+        loaded_image = torch.Tensor(self.load_img(str(userID)))
 
         with self.mp_face_mesh.FaceMesh(
             static_image_mode=False,
@@ -264,6 +264,11 @@ class face_verifier:
 
             video.release()
             cv2.destroyAllWindows()
+        # loop 탈출
+        if self.matched>4:
+            return 1
+        else:
+            return 0
 
 
 if __name__ == "__main__":

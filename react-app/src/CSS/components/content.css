@@ -40,7 +40,7 @@
 }
 
 .inputbox {
-  width: 130%;
+  width: 120%;
   box-sizing: border-box;
   margin-bottom: 10px;
   font-size: 13px;
@@ -55,7 +55,7 @@
 }
 
 .main-btn {
-  width: 130%;
+  width: 120%;
   height: 45px;
   display: inline-block;
   color: #fff;
@@ -67,3 +67,82 @@
   margin-bottom: 10px;
   padding: 0 10px;
 }
+
+ul, li{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+ul{
+  display: flex;
+  flex-flow: row nowrap;
+  padding: 5px;
+}
+li {
+  display:inline-flexbox;
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.join-opts>li::after {
+  content: "|";
+  float:right;
+  display: block;
+}
+.join-opts>li:last-child::after{
+  content: "";
+}
+.join-opts>li>a{
+  padding: 0px 10px;
+  text-decoration: none;
+  color: blue;
+  display: inline-block;
+  font-size: 12px;
+}
+
+.register-input {
+  width: 50%;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+  
+  font-size: 13px;
+  color: #8e8e8e;
+  height: 45px;
+  padding-left: 10px;
+  border: 1px solid #e6e6e6;
+}
+.register-input:hover {
+  border: 1px solid #0c218b;
+}
+
+dl {
+  display: block;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  
+}
+.data-form {
+  align-items: center;
+  padding-left: 30px;
+}
+dt {
+  width: 30%;
+  padding: 17px;
+  margin-right: 10px;
+  background-color:aliceblue;
+  float: left;
+  font-size: 12px;
+}
+
+.submit {
+  align-items: center;
+  width: 92%;
+  height: 40px;
+  background-color: #0c218b;
+  color: #fff;
+  font-size: larger;
+}
+
+

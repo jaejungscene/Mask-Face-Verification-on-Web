@@ -4,7 +4,7 @@
   "description": "It is an Web based verification system on masked faces.",
   "main": "app.js",
   "scripts": {
-    "test": "npm start"
+    "start": "nodemon app"
   },
   "repository": {
     "type": "git",
