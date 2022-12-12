@@ -27,7 +27,7 @@ class face_verifier:
         self.num_of_frames = {"Mask": 0, "No Mask": 0}
         self.matched = 0
         self.threshold = 0.82
-        self.threshold_on_mask = 0.35
+        self.threshold_on_mask = 0.70
         self.loop_count = 0
         # mediapipe configs
         self.mp_face_mesh = mp.solutions.face_mesh
@@ -140,6 +140,7 @@ class face_verifier:
         video = cv2.VideoCapture(0)
 
         loaded_image = torch.Tensor(self.load_img(str(userID)))
+        result = 0
 
         with self.mp_face_mesh.FaceMesh(
             static_image_mode=False,
@@ -150,8 +151,7 @@ class face_verifier:
             while (True):
                 # frame마다 캡쳐하기
                 ret, frame = video.read()
-                img_height, img_width, _ = frame.shape
-
+                frame = cv2.flip(frame, 1)
                 results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 # Draw face landmarks of each face.
 
@@ -188,12 +188,6 @@ class face_verifier:
                     self.num_of_frames["Mask"] = 0
                     color = (0, 0, 255)
 
-                label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
-                cv2.putText(frame, label, (whole_face_rect[0], whole_face_rect[1]-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
-                cv2.rectangle(frame, pt1=tuple(whole_face_rect[0:2]), pt2=tuple(whole_face_rect[2:4]), color=color,
-                              thickness=2)
-
                 # No Mask / Mask 일정 프레임 (8) 도달시
                 if self.num_of_frames["No Mask"] >= 8:
                     #print("embedding: ", len(embedding)) #512
@@ -222,23 +216,6 @@ class face_verifier:
                     self.loop_count += 1
 
                 elif self.num_of_frames["Mask"] >= 8:
-                    """
-                    left_eye, left_eye_rect = self.crop(cropped_image, left_eye_points)
-                    right_eye, right_eye_rect = self.crop(cropped_image, right_eye_points)
-                    nose, nose_rect = self.crop(cropped_image, nose_points)
-                    lip, lip_rect = self.crop(cropped_image, lip_points)
-                    cv2.rectangle(cropped_image, pt1=tuple(left_eye_rect[0:2]), pt2=tuple(left_eye_rect[2:4]),
-                                  color=(255, 255, 255),
-                                  thickness=2)
-                    cv2.rectangle(cropped_image, pt1=tuple(right_eye_rect[0:2]), pt2=tuple(right_eye_rect[2:4]),
-                                  color=(255, 255, 255),
-                                  thickness=2)
-                    cv2.rectangle(cropped_image, pt1=tuple(nose_rect[0:2]), pt2=tuple(nose_rect[2:4]), color=(255, 255, 255),
-                                  thickness=2)
-                    cv2.rectangle(cropped_image, pt1=tuple(lip_rect[0:2]), pt2=tuple(lip_rect[2:4]), color=(255, 255, 255),
-                                  thickness=2)
-                    #cv2.imshow('cropped_image', cropped_image)
-                    """
                     if self.loop_count == 0:
                         print("마스크 착용")
                         print("Comparing Emb Vector")
@@ -246,7 +223,7 @@ class face_verifier:
                     if self.loop_count % 5 == 0:
                         with torch.no_grad():
                             ###########################################
-                            torch_face[:,60:,:] = 0.
+                            torch_face[:,:,60:,:] = 0.
                             # import matplotlib.pyplot as plt
                             # plt.imshow(torch_img.permute(1,2,0))
                             # plt.imshow(torch_img.permute(1,2,0))
@@ -264,8 +241,18 @@ class face_verifier:
 
                     self.loop_count += 1
 
-
+                
+                label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+                cv2.putText(frame, label, (whole_face_rect[0], whole_face_rect[1]-10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+                cv2.rectangle(frame, pt1=tuple(whole_face_rect[0:2]), pt2=tuple(whole_face_rect[2:4]), color=color,
+                              thickness=2)
+                if result != 0:
+                    result_label = "{:.2f}%".format(result * 100)
+                    cv2.putText(frame, result_label, (whole_face_rect[0]-20, whole_face_rect[1]-20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 0, 0), 2)
                 # 화면에 띄우기
+                
                 cv2.imshow('frame', frame)
                 #print(cropped_image.shape, torch_face.shape)
                 # 전처리된 이미지 보려면 주석 해제
@@ -288,4 +275,4 @@ class face_verifier:
 
 if __name__ == "__main__":
     model = face_verifier()
-    model.capturing()
+    model.capturing("testuser1")

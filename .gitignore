@@ -17,3 +17,8 @@ train-and-experiment/temp
 ./react-app/node_modules
 ./node_modules
 node_modules
+
+dataset/*
+images/*
+node-server/views/static/
+react-app/src/joinform.js

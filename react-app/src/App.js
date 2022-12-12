@@ -120,7 +120,7 @@ function App() {
   }
 
   const handleRegiFace = () => {
-    fetch(`http://localhost:4004/faceauth`, {
+    fetch(`http://localhost:4004/faceid`, {
       method: 'POST',
       headers: {
         'Content-Type' : 'application/json',

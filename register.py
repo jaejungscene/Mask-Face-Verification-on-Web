@@ -85,13 +85,13 @@ class face_vectorization:
         torch_img = torch_img.view(1, C, H, W)
         ###########################################
         mask_img = torch_img.clone()
-        mask_img[:,60:,:] = 0.
-        torch_img = torch.stack([torch_img, mask_img])
+        mask_img[:,:,60:,:] = 0.
+        torch_img = torch.concat([torch_img, mask_img],dim=0)
         # import matplotlib.pyplot as plt
         # plt.imshow(torch_img.permute(1,2,0))
         # plt.imshow(torch_img.permute(1,2,0))
         ###########################################
-
+        print((torch_img[0]-torch_img[1]).sum())
         print('input shape', torch_img.shape)
         with torch.no_grad():
             model.eval()
@@ -115,7 +115,7 @@ class face_vectorization:
             while (True):
                 # frame마다 캡쳐하기
                 ret, frame = video.read()
-                img_height, img_width, _ = frame.shape
+                frame = cv2.flip(frame, 1)
 
                 results = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                 # Draw face landmarks of each face.
@@ -128,11 +128,6 @@ class face_vectorization:
 
                 # Face_Landmark Crop
                 mesh_coords = self.landmarksDetection(frame, face_landmarks, False)
-                left_eye_points = np.array([mesh_coords[p] for p in LEFT_EYE], dtype=np.int32)
-                right_eye_points = np.array([mesh_coords[p] for p in RIGHT_EYE], dtype=np.int32)
-                nose_points = np.array([mesh_coords[p] for p in NOSE], dtype=np.int32)
-                lip_points = np.array([mesh_coords[p] for p in LIP], dtype=np.int32)
-
                 whole_face, whole_face_rect = self.crop(frame, mesh_coords)
 
                 # 전처리된 이미지 보려면 주석 해제
@@ -152,5 +147,5 @@ class face_vectorization:
 
 if __name__ == "__main__":
     model = face_vectorization()
-    emb = model.capturing()
+    emb = model.capturing("testuser1")
     print(emb)

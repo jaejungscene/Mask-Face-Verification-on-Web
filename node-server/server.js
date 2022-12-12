@@ -147,8 +147,11 @@ app.post("/faceid", async (req, res, next) => {
       }
     }
     catch(error) {
-      console.log(err);
-      next(error)
+      console.log(error);
+      return res.status(400).json({
+        status: "error",
+        error: error,
+      })
     }
   } else {
     return res.status(400).json({
@@ -193,6 +196,10 @@ app.post("/faceauth", async (req, res) => {
       }
     } catch (err) {
       console.log(err);
+      return res.status(400).json({
+        status: "error",
+        error: err,
+      })
     }
   }
   return res.status(400).json({
