@@ -83,6 +83,15 @@ class face_vectorization:
         torch_img = image_transforms(np_img)
         C, H, W = torch_img.size()
         torch_img = torch_img.view(1, C, H, W)
+        ###########################################
+        mask_img = torch_img.clone()
+        mask_img[:,60:,:] = 0.
+        torch_img = torch.stack([torch_img, mask_img])
+        # import matplotlib.pyplot as plt
+        # plt.imshow(torch_img.permute(1,2,0))
+        # plt.imshow(torch_img.permute(1,2,0))
+        ###########################################
+
         print('input shape', torch_img.shape)
         with torch.no_grad():
             model.eval()

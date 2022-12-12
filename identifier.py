@@ -125,8 +125,12 @@ class face_verifier:
 
         return prediction, torch_img
 
-    def cos_sim(self, x:torch.tensor, y:torch.tensor)->torch.tensor:
-        return x.view(-1).dot(y.view(-1)) / (torch.norm(x)*torch.norm(y))
+    def cos_sim(self, x:torch.tensor, y:torch.tensor, type)->torch.tensor:
+        if type == "mask":
+            return x.view(-1).dot(y[1].view(-1)) / (torch.norm(x)*torch.norm(y[1]))
+        else:
+            return x.view(-1).dot(y[0].view(-1)) / (torch.norm(x)*torch.norm(y[0]))
+
 
     def capturing(self, userID):
         # 모델 불러오기
@@ -199,8 +203,13 @@ class face_verifier:
 
                     if self.loop_count % 5 == 0:
                         with torch.no_grad():
+                            ###########################################
+                            # import matplotlib.pyplot as plt
+                            # plt.imshow(torch_img.permute(1,2,0))
+                            # plt.imshow(torch_img.permute(1,2,0))
+                            ###########################################
                             embedding = iresnet(torch_face).squeeze()
-                            result = self.cos_sim(embedding, loaded_image)
+                            result = self.cos_sim(embedding, loaded_image, "nomask")
 
                         print("result", result)
                         if result > self.threshold:
@@ -236,8 +245,14 @@ class face_verifier:
 
                     if self.loop_count % 5 == 0:
                         with torch.no_grad():
+                            ###########################################
+                            torch_face[:,60:,:] = 0.
+                            # import matplotlib.pyplot as plt
+                            # plt.imshow(torch_img.permute(1,2,0))
+                            # plt.imshow(torch_img.permute(1,2,0))
+                            ###########################################
                             embedding = iresnet(torch_face).squeeze()
-                            result = self.cos_sim(embedding, loaded_image.reshape(512,))
+                            result = self.cos_sim(embedding, loaded_image, "mask")
 
                         print("result", result)
                         if result > self.threshold_on_mask:
