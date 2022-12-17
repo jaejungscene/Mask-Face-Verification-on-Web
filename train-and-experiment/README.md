@@ -1,7 +1,7 @@
 # Used Dataset
 - Training Dataset
   - MS1MV2 (IDs: 85K, Total Images: 5.8M) => [download site](https://github.com/deepinsight/insightface/tree/master/recognition/_datasets_#ms1m-arcface-85k-ids58m-images-57)
-- Validation & Test Dataset (in order to find threshold for verification)
+- Validation & Test Dataset
   - LFW with more than one Image (IDs: 1.68K, Total Images: 9.16K) => [download site](http://vis-www.cs.umass.edu/lfw/#download)
   - Face Mask Dataset Generated GAN (FMDG) in kaggle => [download site](https://www.kaggle.com/datasets/prasoonkottarathil/face-mask-lite-dataset)
 
