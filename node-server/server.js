@@ -5,7 +5,7 @@ import { db } from "./config";
 
 // import globalRouter from "./routers/globalRouter.js";
 const cors = require("cors");
-const PORT = 4004 || process.env.PORT;
+const PORT =  process.env.PORT || 8090;
 const app = express();
 const logger = morgan("dev");
 const usersCollectionRef = collection(db, "users");
